@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+.DS_Store
+data-generator/out/
+*.log
