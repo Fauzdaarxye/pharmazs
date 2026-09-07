@@ -1,7 +1,8 @@
 import { query, queryOne, RowDataPacket } from '../db/pool';
 import { Principal } from '../types';
 import { scopeSales, scopeByHcp, buildWhere, frag, ScopeClause } from '../http/scope';
-import { resolveWindow, minusMonths, dataDateRange } from './common.repo';
+import { resolveWindow,
+  priorWindow, monthSpan, minusMonths, dataDateRange } from './common.repo';
 
 /**
  * All dashboard aggregates. SQL is parameterised; role scoping is applied in the
@@ -52,14 +53,19 @@ export async function getKpis(
   filters: { from?: string; to?: string; regionIds: number[]; taId?: number; drugId?: number },
 ): Promise<Kpis> {
   const range = await dataDateRange();
-  // Headline TOTALS span the requested window, or the full dataset when none is given —
-  // this is the all-time figure the KPI cards show (matches the ~₹18.9B contract example).
-  const totalFrom = filters.from ?? range.min;
-  const totalTo = filters.to ?? range.max;
-  // Period-over-period DELTAS compare the trailing window vs the immediately-prior window.
+  // ONE window governs both the headline totals and the deltas. Previously the
+  // totals spanned the whole dataset while the deltas compared trailing periods,
+  // so the card read ₹1892 Cr (all 24 months) directly beneath a "Last 12 Months"
+  // filter chip, and the regional table underneath it summed to ₹1088 Cr. A KPI
+  // that disagrees with the filter above it and the table below it is worse than
+  // no KPI.
   const { from, to } = await resolveWindow(filters.from, filters.to);
-  const prevFrom = minusMonths(from, monthsBetween(from, to));
-  const prevTo = minusMonths(to, monthsBetween(from, to));
+  const prevWin = priorWindow(from, to);
+  const prevFrom = prevWin.from;
+  const prevTo = prevWin.to;
+  const totalFrom = from;
+  const totalTo = to;
+  void range;
 
   const salesScope = scopeSales(p, 's');
 
@@ -96,18 +102,18 @@ export async function getKpis(
   ];
   const rxTotalWhere = buildWhere(rxTotalFrags);
   const rxRow = await queryOne<RowDataPacket & { rx: number }>(
-    `SELECT COALESCE(SUM(rx.units),0) AS rx FROM prescriptions rx ${rxTotalWhere.sql}`,
+    `SELECT COUNT(*) AS rx FROM prescriptions rx ${rxTotalWhere.sql}`  /* COUNT: a prescription is a script, not a tablet */,
     rxTotalWhere.params,
   );
   // trailing + prior period Rx for the delta.
   const curRxWhere = buildWhere([frag('rx.prescription_date BETWEEN ? AND ?', from, to), rxScope]);
   const curRxRow = await queryOne<RowDataPacket & { rx: number }>(
-    `SELECT COALESCE(SUM(rx.units),0) AS rx FROM prescriptions rx ${curRxWhere.sql}`,
+    `SELECT COUNT(*) AS rx FROM prescriptions rx ${curRxWhere.sql}`,
     curRxWhere.params,
   );
   const prevRxWhere = buildWhere([frag('rx.prescription_date BETWEEN ? AND ?', prevFrom, prevTo), rxScope]);
   const prevRxRow = await queryOne<RowDataPacket & { rx: number }>(
-    `SELECT COALESCE(SUM(rx.units),0) AS rx FROM prescriptions rx ${prevRxWhere.sql}`,
+    `SELECT COUNT(*) AS rx FROM prescriptions rx ${prevRxWhere.sql}`,
     prevRxWhere.params,
   );
 
@@ -116,6 +122,12 @@ export async function getKpis(
   const activeHcpRow = await queryOne<CountRow>(
     `SELECT COUNT(DISTINCT rx.hcp_id) AS n FROM prescriptions rx ${activeHcpWhere.sql}`,
     activeHcpWhere.params,
+  );
+  // Prior-window active HCPs, so the delta is measured rather than reported as 0.
+  const prevActiveHcpWhere = buildWhere([frag('rx.prescription_date BETWEEN ? AND ?', prevFrom, prevTo), rxScope]);
+  const prevActiveHcpRow = await queryOne<CountRow>(
+    `SELECT COUNT(DISTINCT rx.hcp_id) AS n FROM prescriptions rx ${prevActiveHcpWhere.sql}`,
+    prevActiveHcpWhere.params,
   );
 
   // Market share: latest month average of our_share_pct (scoped by region for managers).
@@ -193,7 +205,7 @@ export async function getKpis(
       totalRevenue: revenueGrowthPct,
       revenueGrowthPct: revenueGrowthPct,
       totalPrescriptions: pctChange(Number(curRxRow?.rx ?? 0), Number(prevRxRow?.rx ?? 0)),
-      activeHcps: round1(0),
+      activeHcps: pctChange(activeHcpRow?.n ?? 0, prevActiveHcpRow?.n ?? 0),
       marketSharePct: round1(curShare - prevShare),
       inventoryAvailabilityPct: round1(curAvail - prevAvail),
     },
@@ -201,11 +213,6 @@ export async function getKpis(
   };
 }
 
-function monthsBetween(from: string, to: string): number {
-  const a = new Date(from + 'T00:00:00Z');
-  const b = new Date(to + 'T00:00:00Z');
-  return (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth()) + 1;
-}
 
 export interface RevenueTrendPoint {
   period: string;
@@ -267,7 +274,7 @@ export async function getTherapeuticAreas(
   filters: { from?: string; to?: string; regionIds: number[] },
 ): Promise<TaPerf[]> {
   const { from, to } = await resolveWindow(filters.from, filters.to);
-  const span = monthsBetween(from, to);
+  const span = monthSpan(from, to);
   const prevFrom = minusMonths(from, span);
   const prevTo = minusMonths(to, span);
   const salesScope = scopeSales(p, 's');
@@ -317,7 +324,7 @@ export async function getRegionalPerformance(
   filters: { from?: string; to?: string },
 ): Promise<{ rows: RegionalPerf[]; highlights: { topRegion: string | null; fastestGrowing: string | null; atRisk: string | null } }> {
   const { from, to } = await resolveWindow(filters.from, filters.to);
-  const span = monthsBetween(from, to);
+  const span = monthSpan(from, to);
   const prevFrom = minusMonths(from, span);
   const prevTo = minusMonths(to, span);
   // Managers only see their own region.
@@ -342,7 +349,7 @@ export async function getRegionalPerformance(
   );
   const rxW = buildWhere([frag('rx.prescription_date BETWEEN ? AND ?', from, to), scopeByHcp(p, 'rx.hcp_id', 'rx.region_id')]);
   const rx = await query<RowDataPacket & { regionId: number; rx: number }>(
-    `SELECT rx.region_id AS regionId, SUM(rx.units) AS rx FROM prescriptions rx ${rxW.sql} GROUP BY rx.region_id`,
+    `SELECT rx.region_id AS regionId, COUNT(*) AS rx /* COUNT(*): a prescription is a script written, not a tablet dispensed */ FROM prescriptions rx ${rxW.sql} GROUP BY rx.region_id`,
     rxW.params,
   );
   const hcpCounts = await query<RowDataPacket & { regionId: number; n: number }>(
@@ -402,7 +409,7 @@ export async function getTopProducts(
   filters: { from?: string; to?: string; regionIds: number[]; limit: number },
 ): Promise<TopProduct[]> {
   const { from, to } = await resolveWindow(filters.from, filters.to);
-  const span = monthsBetween(from, to);
+  const span = monthSpan(from, to);
   const prevFrom = minusMonths(from, span);
   const prevTo = minusMonths(to, span);
   const salesScope = scopeSales(p, 's');
@@ -431,7 +438,12 @@ export async function getTopProducts(
     const rxScope = scopeByHcp(p, 'rx.hcp_id', 'rx.region_id');
     const rxW = buildWhere([frag(`rx.drug_id IN (${ph})`, ...drugIds), frag('rx.prescription_date BETWEEN ? AND ?', from, to), rxScope]);
     const rx = await query<RowDataPacket & { drugId: number; rx: number }>(
-      `SELECT rx.drug_id AS drugId, SUM(rx.units) AS rx FROM prescriptions rx ${rxW.sql} GROUP BY rx.drug_id`,
+      `SELECT rx.drug_id AS drugId, COUNT(*) AS rx
+         /* The Top Products column is labelled "Prescriptions", so it must COUNT
+            scripts. Summing units put RespiCare at 195,240 on a dashboard whose own
+            Total Prescriptions KPI read 159K for the same window. (HCP "Rx Volume"
+            legitimately stays a unit sum - different metric, different label.) */
+       FROM prescriptions rx ${rxW.sql} GROUP BY rx.drug_id`,
       rxW.params,
     );
     rx.forEach((r) => rxMap.set(r.drugId, Number(r.rx)));

@@ -191,6 +191,8 @@ class PharmaIQGenerator:
             self.drugs_by_ta[tid].append(i)
             self.drugs.append((i, f"DRG-{i:04d}", name, generic, tid, f"{price:.2f}",
                                form, strength, launch.isoformat(), 1))
+        # Pack-size band per drug, resolved once (hot path in the sim).
+        self.units_band = {d: C.units_for_price(m["price"]) for d, m in self.drug_meta.items()}
         # Precompute per-TA brand-strength weight vectors (hot path in the sim).
         self.ta_pool = {t: np.array(v, dtype=int) for t, v in self.drugs_by_ta.items()}
         self.ta_weights = {
@@ -339,18 +341,66 @@ class PharmaIQGenerator:
             self.rep_for_hcp[hid] = rep
 
     def build_targets(self):
+        """
+        Set monthly quotas FROM each rep's simulated revenue.
+
+        Targets used to be drawn independently (₹1.8-4.2 Cr per rep per year),
+        which put the company-wide quota at ~₹14 Cr/month against ~₹97 Cr/month of
+        actual revenue. Every rep then showed ~700% attainment and the dashboard's
+        target line sat flat on the chart floor — the KPI was unreadable and the
+        "achievement %" column was meaningless.
+
+        A quota is a forecast of a territory, so it has to be derived from that
+        territory's expected performance. Each rep's monthly target is their own
+        simulated revenue perturbed by a modest factor, which lands attainment in a
+        realistic 85-115% band with genuine over- and under-performers. Requires
+        the fact pass to have run first.
+        """
         rng = self.rng
         self.targets = []
         tid = 0
-        for rep_id, _code, _name, _email, _rid, mgr, _terr, _hire, annual, _act in self.reps:
+        # A per-rep bias persists across months: a rep who is behind plan tends to
+        # stay behind, which is what makes the leaderboard meaningful.
+        rep_bias = {}
+        annual: dict[int, float] = defaultdict(float)
+
+        for rep_id, _code, _name, _email, _rid, mgr, _terr, _hire, _annual, _act in self.reps:
             if mgr == "":                     # managers carry zone targets, not quotas
                 continue
-            monthly = float(annual) / 12.0
+            bias = float(rng.normal(1.0, 0.09))
+            rep_bias[rep_id] = float(np.clip(bias, 0.82, 1.18))
             for m in self.months:
+                actual = self.rep_month_revenue.get((rep_id, m), 0.0)
+                if actual <= 0:
+                    continue
+                target = actual * rep_bias[rep_id] * float(rng.uniform(0.97, 1.03))
                 tid += 1
-                season = 1.0 + 0.06 * math.sin((m.month / 12.0) * 2 * math.pi)
-                self.targets.append((tid, rep_id, m.isoformat(),
-                                     f"{monthly * season * float(rng.uniform(0.95, 1.05)):.2f}"))
+                self.targets.append((tid, rep_id, m.isoformat(), f"{target:.2f}"))
+                annual[rep_id] += target
+
+        # Rewrite each rep's annual_target so the dimension agrees with the monthly
+        # quota rows; a manager's zone target is the sum of their team's.
+        team_of = defaultdict(list)
+        for rep_id, _c, _n, _e, _r, mgr, _t, _h, _a, _act in self.reps:
+            if mgr != "":
+                team_of[int(mgr)].append(rep_id)
+
+        last12 = self.months[-12:]
+        rebuilt = []
+        for row in self.reps:
+            rep_id, code, name, email, rid, mgr, terr, hire, _old, act = row
+            if mgr == "":
+                total = sum(
+                    sum(self.rep_month_revenue.get((r, m), 0.0) for m in last12)
+                    * rep_bias.get(r, 1.0)
+                    for r in team_of.get(rep_id, [])
+                )
+            else:
+                total = sum(self.rep_month_revenue.get((rep_id, m), 0.0) for m in last12) \
+                    * rep_bias.get(rep_id, 1.0)
+            rebuilt.append((rep_id, code, name, email, rid, mgr, terr, hire,
+                            f"{max(total, 1_000_000.0):.2f}", act))
+        self.reps = rebuilt
 
     def build_users(self):
         pw = bcrypt_hash(C.DEMO_PASSWORD)
@@ -455,6 +505,7 @@ class PharmaIQGenerator:
         self.sales_units = defaultdict(int)
         self.sales_revenue = defaultdict(float)
         self.visit_count = defaultdict(int)
+        self.rep_month_revenue = defaultdict(float)
         self.closing_stock = {}
         self.comp_share = {}
         self.prescriptions = []
@@ -526,8 +577,12 @@ class PharmaIQGenerator:
                     if tot <= 0:
                         continue
                     did = int(rng.choice(self.ta_pool[tid], p=w / tot))
-                    units = int(np.clip(rng.normal(28, 11), 4, 90))
-                    patients = int(np.clip(units / rng.uniform(3.5, 9.0), 1, 22))
+                    # Pack size scales inversely with unit price (see
+                    # config.UNITS_PER_SCRIPT_BANDS): a cheap oral goes out as a
+                    # month's supply, a ₹92k biologic goes out per dose.
+                    u_mean, u_sd = self.units_band[did]
+                    units = int(max(1, round(rng.normal(u_mean, u_sd))))
+                    patients = int(np.clip(units / rng.uniform(1.2, 9.0), 1, 22))
                     day = int(rng.integers(1, ndays + 1))
                     new_pt = 1 if rng.random() < 0.24 else 0
 
@@ -544,7 +599,7 @@ class PharmaIQGenerator:
 
                     for r in range(reps):
                         rx_id += 1
-                        u = units if r == 0 else int(np.clip(units * nrng.uniform(0.8, 1.2), 4, 90))
+                        u = units if r == 0 else int(max(1, round(units * nrng.uniform(0.8, 1.2))))
                         d = day if r == 0 else int(nrng.integers(1, ndays + 1))
                         if self.collect:
                             rows.append((rx_id, hid, did, rid,
@@ -616,16 +671,19 @@ class PharmaIQGenerator:
                         eff_price = round(price * (1.0 + 0.004 * self.month_index[month])
                                           * float(rng.uniform(0.985, 1.015)), 2)
                         day = int(rng.integers(1, ndays + 1))
+                        # Draw rep and city UNCONDITIONALLY so the stream advances
+                        # identically whether or not rows are being collected.
+                        rep_id = int(rng.choice(reps))
+                        city_id = int(rng.choice(cities))
+                        line_revenue = units * eff_price * (1 - disc / 100)
                         if self.collect:
-                            rows.append((sale_id, did, hcp, int(rng.choice(reps)), rid,
-                                         int(rng.choice(cities)),
+                            rows.append((sale_id, did, hcp, rep_id, rid, city_id,
                                          dt.date(month.year, month.month, day).isoformat(),
                                          units, f"{eff_price:.2f}", f"{disc:.2f}", channel))
-                        else:
-                            rng.choice(reps)
-                            rng.choice(cities)
                         self.sales_units[(did, rid, month)] += units
-                        self.sales_revenue[(did, rid, month)] += units * eff_price * (1 - disc / 100)
+                        self.sales_revenue[(did, rid, month)] += line_revenue
+                        # Per-rep monthly revenue: this is what quotas are set from.
+                        self.rep_month_revenue[(rep_id, month)] += line_revenue
 
     def _sim_visits(self):
         """
@@ -781,8 +839,6 @@ class PharmaIQGenerator:
         self.build_hcps()
         self.build_reps()
         self.build_assignments()
-        self.build_targets()
-        self.build_users()
         self.build_narrative_index()
 
         print("Pass 1/2  baseline (narratives off) — learning the counterfactual...")
@@ -806,6 +862,12 @@ class PharmaIQGenerator:
         print("\nPass 2/2  applying calibrated narratives...")
         self.collect = True
         self.simulate(apply_narrative=True)
+
+        # Quotas are derived FROM simulated revenue, so they must come after the
+        # fact pass. build_targets also rewrites sales_reps.annual_target, and
+        # build_users points the demo accounts at rep rows, so users come last.
+        self.build_targets()
+        self.build_users()
 
         outdir.mkdir(parents=True, exist_ok=True)
         w = Writer(outdir)

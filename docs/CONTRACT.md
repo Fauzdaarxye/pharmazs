@@ -157,9 +157,14 @@ Do not hardcode dates in queries — derive from `MAX(sale_date)` or the params.
 `✱` = calls FastAPI internally.
 
 ### Dashboard / overview
-- `GET /api/dashboard/kpis` → the six KPI cards
+- `GET /api/dashboard/kpis` → the six KPI cards.
+  **Every figure honours the resolved [from,to] window** (default: the trailing 12 whole
+  months, month-aligned). Totals must reconcile with `/dashboard/regional-performance`
+  for the same window — a headline total spanning a different period from the table under
+  it is a bug, not a feature. `totalPrescriptions` COUNTS scripts; it never sums units.
+  `meta.highlights` values are region NAME strings, not objects
   ```jsonc
-  { "totalRevenue": 18923446159, "revenueGrowthPct": 12.4, "totalPrescriptions": 294143,
+  { "totalRevenue": 1787183606, "revenueGrowthPct": 27.6, "totalPrescriptions": 159438,
     "activeHcps": 2000, "marketSharePct": 27.8, "inventoryAvailabilityPct": 94.2,
     "totalProducts": 38, "totalReps": 60,
     "deltas": { "totalRevenue": 12.4, "revenueGrowthPct": 3.2, "totalPrescriptions": 8.7,

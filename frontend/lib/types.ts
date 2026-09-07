@@ -135,9 +135,13 @@ export interface RegionalHighlight {
 }
 
 export interface RegionalHighlights {
-  topRegion: RegionalHighlight;
-  fastestGrowing: RegionalHighlight;
-  atRisk: RegionalHighlight;
+  // Region NAMES, not objects. The API emits plain strings here; typing these as
+  // RegionalHighlight objects made every StatTile fall back to the em-dash,
+  // because "North".regionName is quietly undefined rather than a type error
+  // at runtime.
+  topRegion: string;
+  fastestGrowing: string;
+  atRisk: string;
 }
 
 export interface TopProduct {

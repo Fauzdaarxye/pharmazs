@@ -78,13 +78,61 @@ describe('Protected routes', () => {
 });
 
 describe('Dashboard KPIs (real seeded data)', () => {
-  it('returns total revenue around ₹18.9 billion for an unscoped admin', async () => {
+  // This suite asserts INVARIANTS rather than magic revenue constants. The
+  // original test pinned totalRevenue to ">₹18e9", which quietly encoded a bug as
+  // the expected result: the KPI was summing the whole 24-month dataset while the
+  // regional table beneath it summed only the trailing 12 months, so the two
+  // disagreed by a factor of ~1.7 and the test passed anyway. A constant also
+  // breaks whenever the generator is retuned. Cross-endpoint consistency is the
+  // property we actually care about, and it would have caught the real defect.
+  it('reports totals that reconcile with the regional breakdown', async () => {
     const { accessToken } = await login(app, 'admin@pharmaiq.io');
-    const res = await request(app).get('/api/dashboard/kpis').set('Authorization', `Bearer ${accessToken}`);
-    expect(res.status).toBe(200);
-    expect(res.body.data.totalRevenue).toBeGreaterThan(18e9);
-    expect(res.body.data.totalRevenue).toBeLessThan(19.5e9);
-    expect(res.body.data.totalProducts).toBe(38);
+    const auth = { Authorization: `Bearer ${accessToken}` };
+
+    const kpis = await request(app).get('/api/dashboard/kpis').set(auth);
+    expect(kpis.status).toBe(200);
+    const regions = await request(app).get('/api/dashboard/regional-performance').set(auth);
+    expect(regions.status).toBe(200);
+
+    const regionSum = regions.body.data.reduce(
+      (acc: number, r: { revenue: number }) => acc + r.revenue,
+      0,
+    );
+    // Same window, same scope => same money, within a rounding tolerance.
+    expect(kpis.body.data.totalRevenue).toBeGreaterThan(0);
+    expect(Math.abs(kpis.body.data.totalRevenue - regionSum) / regionSum).toBeLessThan(0.005);
+
+    expect(kpis.body.data.totalProducts).toBe(38);
+    expect(kpis.body.data.activeHcps).toBeGreaterThan(0);
+  });
+
+  it('counts prescriptions as scripts, not dispensed units', async () => {
+    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const auth = { Authorization: `Bearer ${accessToken}` };
+
+    const kpis = await request(app).get('/api/dashboard/kpis').set(auth);
+    const products = await request(app).get('/api/dashboard/top-products?limit=6').set(auth);
+    expect(products.status).toBe(200);
+
+    const topSum = products.body.data.reduce(
+      (acc: number, p: { prescriptions: number }) => acc + p.prescriptions,
+      0,
+    );
+    // Six products cannot account for more scripts than the whole company wrote.
+    // Summing `units` instead of rows put a single product above the total KPI.
+    expect(topSum).toBeLessThan(kpis.body.data.totalPrescriptions);
+    expect(topSum).toBeGreaterThan(0);
+  });
+
+  it('returns a month-aligned sparkline with no partial leading bucket', async () => {
+    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const res = await request(app).get('/api/dashboard/kpis').set({ Authorization: `Bearer ${accessToken}` });
+    const spark: number[] = res.body.data.sparklines.totalRevenue;
+    expect(spark).toHaveLength(12);
+    // A non-month-aligned window made the first bucket a single DAY, ~45x smaller
+    // than its neighbours, which rendered as a vertical cliff on the revenue chart.
+    const median = [...spark].sort((a, b) => a - b)[Math.floor(spark.length / 2)];
+    expect(spark[0]).toBeGreaterThan(median * 0.5);
   });
 });
 

@@ -204,19 +204,19 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <StatTile
                   label="Top Region"
-                  value={regional.data!.highlights?.topRegion.regionName ?? "—"}
+                  value={regional.data!.highlights?.topRegion ?? "—"}
                   icon={<Trophy size={14} />}
                   tone="neutral"
                 />
                 <StatTile
                   label="Fastest Growing"
-                  value={regional.data!.highlights?.fastestGrowing.regionName ?? "—"}
+                  value={regional.data!.highlights?.fastestGrowing ?? "—"}
                   icon={<TrendingUpIcon size={14} />}
                   tone="success"
                 />
                 <StatTile
                   label="At Risk"
-                  value={regional.data!.highlights?.atRisk.regionName ?? "—"}
+                  value={regional.data!.highlights?.atRisk ?? "—"}
                   icon={<AlertTriangle size={14} />}
                   tone="danger"
                 />
@@ -228,7 +228,7 @@ export default function DashboardPage() {
                     <span className="text-[14px] font-medium text-text">{r.regionName}</span>
                     <div className="flex items-center gap-4">
                       <span className="tnum text-[13px] text-text-muted">
-                        MS: {Math.round(r.marketSharePct)}%
+                        MS: {r.marketSharePct.toFixed(1)}%
                       </span>
                       <span className="tnum text-[14px] font-semibold text-text">
                         {formatCurrency(r.revenue)}

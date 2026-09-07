@@ -19,8 +19,8 @@ Drug **CardioMax**, region **North**, last **3** months vs the 3 before.
 
 | Metric                      | Measured in the data |
 |-----------------------------|----------------------|
-| Revenue                     | **−15.3%**           |
-| Prescription units          | **−8.5%**            |
+| Revenue                     | **−15.7%**           |
+| Prescription units          | **−8.7%**            |
 | Regional visits (engagement)| **−14.6%**           |
 | Inventory (closing stock)   | **−5.0%**            |
 | Competitor share            | **+7.0 pp**          |
@@ -43,9 +43,9 @@ Drug **RespiCare**, region **East**, last **2** months vs the 2 before.
 
 | Metric             | Measured  |
 |--------------------|-----------|
-| Revenue            | **−26.6%**|
-| Prescription units | −0.6% (essentially flat) |
-| Inventory          | −10.0%    |
+| Revenue            | **−26.9%**|
+| Prescription units | −1.9% (essentially flat) |
+| Inventory          | −18.3%    |
 | Stockout days      | 11        |
 | Competitor share   | +3.0 pp   |
 
@@ -60,8 +60,8 @@ Drug **Dapaglyn**, region **West**, last **4** months vs the 4 before.
 
 | Metric             | Measured  |
 |--------------------|-----------|
-| Revenue            | **+34.5%**|
-| Prescription units | +25.1%    |
+| Revenue            | **+35.4%**|
+| Prescription units | +25.9%    |
 | Visits             | +18.5%    |
 | Inventory          | +15.0%    |
 | Competitor share   | −5.0 pp   |
@@ -92,3 +92,17 @@ cd data-generator && .venv/bin/python generate.py
 Seed is fixed at 42, so the numbers above are reproducible. The generator prints a
 target-vs-measured verification table at the end and writes it to
 `out/_manifest.json`; trust that table over this file if they ever disagree.
+
+## Scale note (post-retune)
+
+Pack size now scales inversely with unit price (`config.UNITS_PER_SCRIPT_BANDS`).
+Before that, every prescription drew ~28 units regardless of drug, so 28 units of a
+₹92,000 biologic billed ₹2.6 crore from a single script and oncology reached **89%**
+of company revenue — the therapeutic-area card rendered as one full bar beside five
+slivers. With realistic pack sizes the mix is Oncology 39%, Diabetes 19%, Cardiology
+13%, Respiratory 12%, Gastroenterology 8%, Neurology 8%, and trailing-12-month
+revenue is ≈₹179 crore.
+
+Rep quotas are likewise derived FROM simulated revenue rather than drawn independently,
+so attainment spans 85–123% (mean ≈101%) instead of the ~700% the arbitrary targets
+produced.

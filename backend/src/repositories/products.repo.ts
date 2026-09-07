@@ -105,7 +105,7 @@ export async function listProducts(
          GROUP BY s.drug_id
       ) prev ON prev.drug_id = d.drug_id
       LEFT JOIN (
-        SELECT rx.drug_id, SUM(rx.units) AS rx
+        SELECT rx.drug_id, COUNT(*) AS rx /* COUNT(*): a prescription is a script written, not a tablet dispensed */
           FROM prescriptions rx WHERE rx.prescription_date BETWEEN ? AND ?
          GROUP BY rx.drug_id
       ) rx ON rx.drug_id = d.drug_id
@@ -170,7 +170,7 @@ async function listOneProduct(p: Principal, drugId: number, from: string, to: st
             d.ta_id AS taId, ta.ta_name AS taName, d.unit_price AS unitPrice, d.dosage_form AS dosageForm, d.strength AS strength,
             COALESCE((SELECT SUM(s.units_sold) FROM sales s WHERE s.drug_id=d.drug_id AND s.sale_date BETWEEN ? AND ?${scopeSql}),0) AS unitsSold,
             COALESCE((SELECT SUM(s.revenue) FROM sales s WHERE s.drug_id=d.drug_id AND s.sale_date BETWEEN ? AND ?${scopeSql}),0) AS revenue,
-            COALESCE((SELECT SUM(rx.units) FROM prescriptions rx WHERE rx.drug_id=d.drug_id AND rx.prescription_date BETWEEN ? AND ?),0) AS rxVolume,
+            COALESCE((SELECT COUNT(*) FROM prescriptions rx WHERE rx.drug_id=d.drug_id AND rx.prescription_date BETWEEN ? AND ?),0) AS rxVolume,
             COALESCE((SELECT AVG(our_share_pct) FROM market_share WHERE drug_id=d.drug_id AND period_month=(SELECT MAX(period_month) FROM market_share)),0) AS marketSharePct
        FROM drugs d JOIN therapeutic_areas ta ON ta.ta_id = d.ta_id
       WHERE d.drug_id = ?`,

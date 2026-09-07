@@ -210,9 +210,9 @@ export function mockRegionalPerformance(): {
   data: RegionalPerformance[];
   meta: {
     highlights: {
-      topRegion: { regionId: number; regionName: string };
-      fastestGrowing: { regionId: number; regionName: string };
-      atRisk: { regionId: number; regionName: string };
+      topRegion: string;
+      fastestGrowing: string;
+      atRisk: string;
     };
   };
 } {
@@ -227,9 +227,9 @@ export function mockRegionalPerformance(): {
     data,
     meta: {
       highlights: {
-        topRegion: { regionId: 4, regionName: "West" },
-        fastestGrowing: { regionId: 4, regionName: "West" },
-        atRisk: { regionId: 3, regionName: "East" },
+        topRegion: "West",
+        fastestGrowing: "Central",
+        atRisk: "East",
       },
     },
   };

@@ -162,6 +162,37 @@ DRUGS: list[tuple] = [
 ]
 
 # ---------------------------------------------------------------------------
+# UNITS PER PRESCRIPTION, banded by unit price.
+#
+# A single draw of ~28 units for every drug is what broke the therapeutic-area
+# mix: 28 units of a ₹92,000 immuno-oncology vial is ₹2.6 crore from ONE script,
+# so oncology finished at 89% of company revenue and the TA card rendered as one
+# full bar beside five slivers.
+#
+# Real dispensing scales inversely with unit cost. A cheap oral tablet goes out as
+# a month's supply; a specialty injectable is dispensed per dose, a handful at a
+# time. Bands below are (price_below, mean_units, sd_units) and are evaluated in
+# order, so they double as a rough proxy for dosage form without needing a second
+# lookup table.
+# ---------------------------------------------------------------------------
+UNITS_PER_SCRIPT_BANDS: list[tuple[float, float, float]] = [
+    (150.0,      45.0, 14.0),   # cheap orals — monthly pack
+    (500.0,      30.0, 10.0),   # standard orals / inhalers
+    (2_000.0,    12.0,  4.0),   # higher-cost orals, insulin pens
+    (10_000.0,    4.0,  1.5),   # specialty injectables, per-cycle
+    (float("inf"), 1.6, 0.6),   # immuno-oncology biologics — per dose
+]
+
+
+def units_for_price(price: float) -> tuple[float, float]:
+    """(mean, sd) units per prescription for a drug at this unit price."""
+    for ceiling, mean, sd in UNITS_PER_SCRIPT_BANDS:
+        if price < ceiling:
+            return mean, sd
+    return 1.6, 0.6
+
+
+# ---------------------------------------------------------------------------
 # HCP SPECIALTIES -> therapeutic-area affinity (SRS §21).
 # "A cardiologist should be more likely to prescribe cardiovascular products."
 # Rows need not sum to 1; they are normalised at draw time. Non-zero off-diagonal
