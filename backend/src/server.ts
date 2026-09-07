@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   }
 
   const server = app.listen(config.port, () => {
-    logger.info(`PharmaIQ API listening on http://localhost:${config.port}/api`);
+    logger.info(`PharmaZs API listening on http://localhost:${config.port}/api`);
   });
 
   const shutdown = async (signal: string) => {

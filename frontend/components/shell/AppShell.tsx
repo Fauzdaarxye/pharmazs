@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg">
-        <CenteredSpinner label="Loading PharmaIQ…" />
+        <CenteredSpinner label="Loading PharmaZs…" />
       </div>
     );
   }

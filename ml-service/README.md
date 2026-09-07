@@ -1,7 +1,7 @@
-# PharmaIQ — ML / Analytics Service
+# PharmaZs — ML / Analytics Service
 
 FastAPI service providing forecasting, HCP scoring, anomaly detection, root-cause
-attribution and recommendations for PharmaIQ. **Internal only** — bound to
+attribution and recommendations for PharmaZs. **Internal only** — bound to
 `127.0.0.1:8000`, reached solely by the Node API (never the browser, never
 directly). Plain JSON in/out, no response envelope, no auth (CONTRACT.md §1, §6).
 
@@ -16,7 +16,7 @@ cp .env.example .env         # DB creds for the isolated MySQL on :3307
 ./run.sh                     # uvicorn on 127.0.0.1:8000
 ```
 
-Requires the isolated Homebrew MySQL on `127.0.0.1:3307` (db `pharmaiq`) to be
+Requires the isolated Homebrew MySQL on `127.0.0.1:3307` (db `pharmazs`) to be
 running. The service reads fact data and writes only to the ML output tables
 (`hcp_scores`, `forecasts`, `anomalies`, `alerts`); it never mutates
 transactional data or the schema.

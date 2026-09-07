@@ -18,19 +18,19 @@ describe('Auth', () => {
   it('logs in a valid user and returns tokens + user', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'admin@pharmaiq.io', password: 'PharmaIQ@2026' });
+      .send({ email: 'admin@pharmazs.io', password: 'PharmaZs@2026' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(typeof res.body.data.accessToken).toBe('string');
     expect(typeof res.body.data.refreshToken).toBe('string');
-    expect(res.body.data.user.email).toBe('admin@pharmaiq.io');
+    expect(res.body.data.user.email).toBe('admin@pharmazs.io');
     expect(res.body.data.user.role).toBe('ADMIN');
   });
 
   it('rejects a wrong password with 401 UNAUTHORIZED', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'admin@pharmaiq.io', password: 'wrong-password' });
+      .send({ email: 'admin@pharmazs.io', password: 'wrong-password' });
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('UNAUTHORIZED');
@@ -43,17 +43,17 @@ describe('Auth', () => {
   });
 
   it('refreshes an access token, and /me works with it', async () => {
-    const l = await login(app, 'exec@pharmaiq.io');
+    const l = await login(app, 'exec@pharmazs.io');
     const refreshed = await request(app).post('/api/auth/refresh').send({ refreshToken: l.refreshToken });
     expect(refreshed.status).toBe(200);
     const newToken = refreshed.body.data.accessToken;
     const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${newToken}`);
     expect(me.status).toBe(200);
-    expect(me.body.data.email).toBe('exec@pharmaiq.io');
+    expect(me.body.data.email).toBe('exec@pharmazs.io');
   });
 
   it('revokes a refresh token on logout', async () => {
-    const l = await login(app, 'analyst@pharmaiq.io');
+    const l = await login(app, 'analyst@pharmazs.io');
     const out = await request(app).post('/api/auth/logout').send({ refreshToken: l.refreshToken });
     expect(out.status).toBe(200);
     const reuse = await request(app).post('/api/auth/refresh').send({ refreshToken: l.refreshToken });
@@ -86,7 +86,7 @@ describe('Dashboard KPIs (real seeded data)', () => {
   // breaks whenever the generator is retuned. Cross-endpoint consistency is the
   // property we actually care about, and it would have caught the real defect.
   it('reports totals that reconcile with the regional breakdown', async () => {
-    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const { accessToken } = await login(app, 'admin@pharmazs.io');
     const auth = { Authorization: `Bearer ${accessToken}` };
 
     const kpis = await request(app).get('/api/dashboard/kpis').set(auth);
@@ -107,7 +107,7 @@ describe('Dashboard KPIs (real seeded data)', () => {
   });
 
   it('counts prescriptions as scripts, not dispensed units', async () => {
-    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const { accessToken } = await login(app, 'admin@pharmazs.io');
     const auth = { Authorization: `Bearer ${accessToken}` };
 
     const kpis = await request(app).get('/api/dashboard/kpis').set(auth);
@@ -125,7 +125,7 @@ describe('Dashboard KPIs (real seeded data)', () => {
   });
 
   it('returns a month-aligned sparkline with no partial leading bucket', async () => {
-    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const { accessToken } = await login(app, 'admin@pharmazs.io');
     const res = await request(app).get('/api/dashboard/kpis').set({ Authorization: `Bearer ${accessToken}` });
     const spark: number[] = res.body.data.sparklines.totalRevenue;
     expect(spark).toHaveLength(12);
@@ -138,7 +138,7 @@ describe('Dashboard KPIs (real seeded data)', () => {
 
 describe('Role scoping — SALES_REP', () => {
   it('only ever receives their own assigned HCP panel from /api/hcps', async () => {
-    const { accessToken } = await login(app, 'rep@pharmaiq.io');
+    const { accessToken } = await login(app, 'rep@pharmazs.io');
     const res = await request(app)
       .get('/api/hcps?pageSize=200')
       .set('Authorization', `Bearer ${accessToken}`);
@@ -152,7 +152,7 @@ describe('Role scoping — SALES_REP', () => {
   });
 
   it('cannot access an HCP outside their panel (403), even though it exists', async () => {
-    const { accessToken } = await login(app, 'rep@pharmaiq.io');
+    const { accessToken } = await login(app, 'rep@pharmazs.io');
     const panel = await request(app)
       .get('/api/hcps?pageSize=200')
       .set('Authorization', `Bearer ${accessToken}`);
@@ -178,7 +178,7 @@ describe('Role scoping — SALES_REP', () => {
 
 describe('Role scoping — MANAGER', () => {
   it('only sees their own region in regional performance', async () => {
-    const { accessToken } = await login(app, 'manager@pharmaiq.io');
+    const { accessToken } = await login(app, 'manager@pharmazs.io');
     const res = await request(app)
       .get('/api/dashboard/regional-performance')
       .set('Authorization', `Bearer ${accessToken}`);
@@ -187,7 +187,7 @@ describe('Role scoping — MANAGER', () => {
   });
 
   it('cannot read another region (403)', async () => {
-    const { accessToken } = await login(app, 'manager@pharmaiq.io');
+    const { accessToken } = await login(app, 'manager@pharmazs.io');
     // manager belongs to region 1; region 2 must be forbidden
     const res = await request(app).get('/api/regions/2').set('Authorization', `Bearer ${accessToken}`);
     expect(res.status).toBe(403);
@@ -197,7 +197,7 @@ describe('Role scoping — MANAGER', () => {
 
 describe('Pagination', () => {
   it('honours page/pageSize and returns pagination meta', async () => {
-    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const { accessToken } = await login(app, 'admin@pharmazs.io');
     const res = await request(app)
       .get('/api/products?page=2&pageSize=5&sort=-revenue')
       .set('Authorization', `Bearer ${accessToken}`);
@@ -210,7 +210,7 @@ describe('Pagination', () => {
   });
 
   it('rejects pageSize over the max (200) with VALIDATION_ERROR', async () => {
-    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const { accessToken } = await login(app, 'admin@pharmazs.io');
     const res = await request(app)
       .get('/api/products?pageSize=500')
       .set('Authorization', `Bearer ${accessToken}`);
@@ -221,7 +221,7 @@ describe('Pagination', () => {
 
 describe('Query validation', () => {
   it('returns VALIDATION_ERROR for a non-integer query param', async () => {
-    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const { accessToken } = await login(app, 'admin@pharmazs.io');
     const res = await request(app)
       .get('/api/products?pageSize=abc')
       .set('Authorization', `Bearer ${accessToken}`);
@@ -230,7 +230,7 @@ describe('Query validation', () => {
   });
 
   it('rejects a sort-injection attempt (sort not in the allow-list)', async () => {
-    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const { accessToken } = await login(app, 'admin@pharmazs.io');
     const res = await request(app)
       .get('/api/products?sort=revenue;DROP TABLE sales')
       .set('Authorization', `Bearer ${accessToken}`);
@@ -242,7 +242,7 @@ describe('Query validation', () => {
 
 describe('ML passthrough when FastAPI is down', () => {
   it('returns 503 ML_UNAVAILABLE (never fabricates numbers, never crashes)', async () => {
-    const { accessToken } = await login(app, 'admin@pharmaiq.io');
+    const { accessToken } = await login(app, 'admin@pharmazs.io');
     const res = await request(app)
       .get('/api/forecast?entityType=COMPANY&horizon=6')
       .set('Authorization', `Bearer ${accessToken}`);

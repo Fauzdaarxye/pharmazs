@@ -1,7 +1,7 @@
 {
-  "name": "pharmaiq-backend",
+  "name": "pharmazs-backend",
   "version": "1.0.0",
-  "description": "PharmaIQ Node.js + Express API",
+  "description": "PharmaZs Node.js + Express API",
   "type": "commonjs",
   "main": "dist/server.js",
   "scripts": {

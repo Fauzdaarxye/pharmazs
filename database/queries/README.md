@@ -1,6 +1,6 @@
-# PharmaIQ — Analytical SQL Query Library
+# PharmaZs — Analytical SQL Query Library
 
-A documented, verification-backed SQL library for the PharmaIQ commercial-intelligence
+A documented, verification-backed SQL library for the PharmaZs commercial-intelligence
 platform (SRS §16). **28 distinct analytical queries** across 10 files, each executed
 against the live database and confirmed to return plausible rows.
 
@@ -120,8 +120,8 @@ aggregation (`SUM(CASE WHEN …)`) — all present.
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"
-mysql --socket=/opt/homebrew/var/mysql/pharmaiq.sock -u root -D pharmaiq -e "<sql>"
+mysql --socket=/opt/homebrew/var/mysql/pharmazs.sock -u root -D pharmazs -e "<sql>"
 ```
 
-Isolated Homebrew MySQL 26.7 on the `pharmaiq.sock` socket (port 3307) — **not** the
+Isolated Homebrew MySQL 26.7 on the `pharmazs.sock` socket (port 3307) — **not** the
 system MySQL on 3306.

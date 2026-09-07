@@ -12,7 +12,7 @@ export default function RootPage() {
   }, [router]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg">
-      <CenteredSpinner label="Loading PharmaIQ…" />
+      <CenteredSpinner label="Loading PharmaZs…" />
     </div>
   );
 }

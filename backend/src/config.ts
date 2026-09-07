@@ -23,9 +23,9 @@ export const config = {
   db: {
     host: req('DB_HOST', '127.0.0.1'),
     port: num('DB_PORT', 3307),
-    user: req('DB_USER', 'pharmaiq'),
-    password: req('DB_PASSWORD', 'pharmaiq_dev_2026'),
-    database: req('DB_NAME', 'pharmaiq'),
+    user: req('DB_USER', 'pharmazs'),
+    password: req('DB_PASSWORD', 'pharmazs_dev_2026'),
+    database: req('DB_NAME', 'pharmazs'),
     socketPath: process.env.DB_SOCKET || undefined,
     connectionLimit: num('DB_CONNECTION_LIMIT', 10),
   },

@@ -1,6 +1,6 @@
-# PharmaIQ — Backend API
+# PharmaZs — Backend API
 
-Node.js + Express 5 API for the PharmaIQ commercial-intelligence platform. It is the
+Node.js + Express 5 API for the PharmaZs commercial-intelligence platform. It is the
 **only** layer that holds DB credentials and the only thing that talks to the Python
 FastAPI ML service (CONTRACT §1). The frontend talks to this API and nothing else.
 
@@ -48,8 +48,8 @@ is committed. Never log a token or password (the logger redacts them).
 
 ```
 PORT=4000
-DB_HOST=127.0.0.1  DB_PORT=3307  DB_USER=pharmaiq  DB_PASSWORD=pharmaiq_dev_2026
-DB_NAME=pharmaiq   DB_SOCKET=/opt/homebrew/var/mysql/pharmaiq.sock
+DB_HOST=127.0.0.1  DB_PORT=3307  DB_USER=pharmazs  DB_PASSWORD=pharmazs_dev_2026
+DB_NAME=pharmazs   DB_SOCKET=/opt/homebrew/var/mysql/pharmazs.sock
 JWT_ACCESS_SECRET=…  JWT_ACCESS_TTL=15m  REFRESH_TTL_DAYS=7  BCRYPT_COST=10
 ML_BASE_URL=http://localhost:8000  ML_TIMEOUT_MS=5000
 CORS_ORIGINS=http://localhost:3000
@@ -88,8 +88,8 @@ Money is returned as a number of rupees; percentages as numbers in percent units
 - Refresh token: opaque random, 7 days, **sha256 hash** stored in `refresh_tokens`.
 - Passwords: bcrypt cost 10.
 
-Demo accounts (password `PharmaIQ@2026`): `admin@`, `exec@`, `manager@`, `rep@`,
-`analyst@` `pharmaiq.io`.
+Demo accounts (password `PharmaZs@2026`): `admin@`, `exec@`, `manager@`, `rep@`,
+`analyst@` `pharmazs.io`.
 
 ## Role scoping (CONTRACT §3) — enforced in SQL
 

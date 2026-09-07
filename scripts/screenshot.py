@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Capture PharmaIQ pages for visual review / regression.
+Capture PharmaZs pages for visual review / regression.
 
     scripts/screenshot.py                       # all default pages
     scripts/screenshot.py /dashboard /hcps      # specific routes
@@ -25,7 +25,7 @@ from pathlib import Path
 
 DEFAULT_PAGES = ["/login", "/dashboard", "/hcps"]
 BASE = "http://127.0.0.1:3000"
-EMAIL, PASSWORD = "exec@pharmaiq.io", "PharmaIQ@2026"
+EMAIL, PASSWORD = "exec@pharmazs.io", "PharmaZs@2026"
 
 
 def main() -> int:

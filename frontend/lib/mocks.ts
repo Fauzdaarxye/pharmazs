@@ -96,11 +96,11 @@ const LAST = [
 
 export function mockLogin(email: string): LoginResponse {
   const roleByEmail: Record<string, LoginResponse["user"]["role"]> = {
-    "admin@pharmaiq.io": "ADMIN",
-    "exec@pharmaiq.io": "EXECUTIVE",
-    "manager@pharmaiq.io": "MANAGER",
-    "rep@pharmaiq.io": "SALES_REP",
-    "analyst@pharmaiq.io": "ANALYST",
+    "admin@pharmazs.io": "ADMIN",
+    "exec@pharmazs.io": "EXECUTIVE",
+    "manager@pharmazs.io": "MANAGER",
+    "rep@pharmazs.io": "SALES_REP",
+    "analyst@pharmazs.io": "ANALYST",
   };
   const role = roleByEmail[email.toLowerCase()] ?? "EXECUTIVE";
   return {

@@ -10,7 +10,7 @@ import type { AuthUser } from "@/lib/types";
 export function Sidebar({ user }: { user: AuthUser | null }) {
   const pathname = usePathname();
 
-  const initials = (user?.fullName ?? "PharmaIQ")
+  const initials = (user?.fullName ?? "PharmaZs")
     .split(" ")
     .map((w) => w[0])
     .slice(0, 2)
@@ -25,7 +25,7 @@ export function Sidebar({ user }: { user: AuthUser | null }) {
           <Activity size={20} />
         </span>
         <div className="leading-tight">
-          <div className="text-[17px] font-bold tracking-tight text-white">PharmaIQ</div>
+          <div className="text-[17px] font-bold tracking-tight text-white">PharmaZs</div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-teal">
             Commercial Intelligence
           </div>

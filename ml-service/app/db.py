@@ -1,4 +1,4 @@
-"""Configuration and database access for the PharmaIQ ML service.
+"""Configuration and database access for the PharmaZs ML service.
 
 The dataset window is fixed (2024-09-01 .. 2026-08-31) but we NEVER hardcode the
 "current" month in queries — we always derive it from MAX(sale_date), per
@@ -20,9 +20,9 @@ load_dotenv()
 class Settings:
     DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
     DB_PORT = int(os.getenv("DB_PORT", "3307"))
-    DB_NAME = os.getenv("DB_NAME", "pharmaiq")
-    DB_USER = os.getenv("DB_USER", "pharmaiq")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "pharmaiq_dev_2026")
+    DB_NAME = os.getenv("DB_NAME", "pharmazs")
+    DB_USER = os.getenv("DB_USER", "pharmazs")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "pharmazs_dev_2026")
     ML_HOST = os.getenv("ML_HOST", "127.0.0.1")
     ML_PORT = int(os.getenv("ML_PORT", "8000"))
 

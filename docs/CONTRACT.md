@@ -1,6 +1,6 @@
-# PharmaIQ — Integration Contract
+# PharmaZs — Integration Contract
 
-**This file is the single source of truth for anyone building a layer of PharmaIQ.**
+**This file is the single source of truth for anyone building a layer of PharmaZs.**
 Backend, ML service and frontend are developed in parallel, so every cross-layer
 detail must be settled here rather than discovered at integration time. If you
 need to deviate, change this file in the same commit.
@@ -13,7 +13,7 @@ need to deviate, change this file in the same commit.
 Browser
   └─> Next.js 15 (App Router)         http://localhost:3000
         └─> Node.js + Express API     http://localhost:4000/api
-              ├─> MySQL 8             127.0.0.1:3307/pharmaiq
+              ├─> MySQL 8             127.0.0.1:3307/pharmazs
               └─> Python FastAPI      http://localhost:8000     (ML / analytics only)
 ```
 
@@ -29,10 +29,10 @@ so we never touch the pre-existing server.
 ```
 host      127.0.0.1
 port      3307
-socket    /opt/homebrew/var/mysql/pharmaiq.sock
-database  pharmaiq
-user      pharmaiq
-password  pharmaiq_dev_2026
+socket    /opt/homebrew/var/mysql/pharmazs.sock
+database  pharmazs
+user      pharmazs
+password  pharmazs_dev_2026
 ```
 
 Start it with `database/mysql-start.sh`.
@@ -113,15 +113,15 @@ Scoping is applied in SQL, not by filtering after the fact. A SALES_REP asking f
 
 ### Demo accounts
 
-Password for all five: `PharmaIQ@2026`
+Password for all five: `PharmaZs@2026`
 
 | Email                  | Role      |
 |------------------------|-----------|
-| admin@pharmaiq.io      | ADMIN     |
-| exec@pharmaiq.io       | EXECUTIVE |
-| manager@pharmaiq.io    | MANAGER   |
-| rep@pharmaiq.io        | SALES_REP |
-| analyst@pharmaiq.io    | ANALYST   |
+| admin@pharmazs.io      | ADMIN     |
+| exec@pharmazs.io       | EXECUTIVE |
+| manager@pharmazs.io    | MANAGER   |
+| rep@pharmazs.io        | SALES_REP |
+| analyst@pharmazs.io    | ANALYST   |
 
 ---
 
@@ -340,11 +340,11 @@ across every page so a colour always means the same area):
 
 ### Shell
 
-- **Sidebar** (navy): logo mark + `PharmaIQ` + teal `COMMERCIAL INTELLIGENCE`; nav items with
+- **Sidebar** (navy): logo mark + `PharmaZs` + teal `COMMERCIAL INTELLIGENCE`; nav items with
   a 20px lucide icon; active item = solid `--sidebar-active` rounded rect, white label.
   Pinned to the bottom: divider, `Settings`, `Help & Support`, then a user card with avatar,
   name and role.
-- **Topbar** (white, 1px bottom border, 64px): breadcrumb `PharmaIQ / <Section>` with the
+- **Topbar** (white, 1px bottom border, 64px): breadcrumb `PharmaZs / <Section>` with the
   current crumb in `--text` semibold; centre search input (`Search products, HCPs, regions…`);
   date-range picker with a calendar icon; `AI Insights Active` pill (violet border, violet
   tint, sparkle icon); bell with a red count badge; help icon.
@@ -412,7 +412,7 @@ subtitle. Every data surface needs **loading / empty / error** states.
 ### `/login` — no shell
 Professional split layout. Posts to `/api/auth/login`, stores both tokens, redirects to
 `/dashboard`. Displays a failed login clearly. Lists the five demo accounts from §3 for
-convenience (all password `PharmaIQ@2026`).
+convenience (all password `PharmaZs@2026`).
 
 ### `/dashboard` — the primary Figma screen, build pixel-faithfully
 H1 `Commercial Intelligence Overview`, subtitle

@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PharmaIQ — Commercial Intelligence",
+  title: "PharmaZs — Commercial Intelligence",
   description:
     "Pharmaceutical commercial-intelligence analytics: revenue, HCP prioritisation, forecasting and risk.",
 };

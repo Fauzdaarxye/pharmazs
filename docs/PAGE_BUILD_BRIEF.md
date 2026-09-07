@@ -1,6 +1,6 @@
 # Page build brief — read this before writing any page
 
-Applies to every agent building a PharmaIQ page. Three agents work inside
+Applies to every agent building a PharmaZs page. Three agents work inside
 `frontend/` simultaneously, so the boundaries below are not style preferences —
 ignoring them causes merge conflicts and lost work.
 
@@ -27,7 +27,7 @@ To call the API directly:
 ```bash
 API=http://127.0.0.1:4000/api
 TOK=$(curl -s -X POST $API/auth/login -H 'Content-Type: application/json' \
-  -d '{"email":"exec@pharmaiq.io","password":"PharmaIQ@2026"}' \
+  -d '{"email":"exec@pharmazs.io","password":"PharmaZs@2026"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['accessToken'])")
 curl -s -H "Authorization: Bearer $TOK" "$API/products?pageSize=2"
 ```

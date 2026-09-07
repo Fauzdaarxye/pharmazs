@@ -1,4 +1,4 @@
-# PharmaIQ ML service — Python 3.14, verified cp314 wheels
+# PharmaZs ML service — Python 3.14, verified cp314 wheels
 numpy==2.5.3
 pandas==3.0.5
 scikit-learn==1.9.0

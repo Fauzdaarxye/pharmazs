@@ -1,4 +1,4 @@
-# PharmaIQ — Frontend
+# PharmaZs — Frontend
 
 Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · Recharts · lucide-react.
 Built strictly against `docs/CONTRACT.md` §7 (design system) and §9 (page specs).
@@ -20,7 +20,7 @@ NEXT_PUBLIC_USE_MOCKS=0
 ```
 
 Demo logins (mock or real): the five accounts from Contract §3, password
-`PharmaIQ@2026`.
+`PharmaZs@2026`.
 
 ## Verify
 

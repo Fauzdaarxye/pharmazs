@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Start PharmaIQ's own MySQL instance.
+# Start PharmaZs's own MySQL instance.
 #
 # WHY A SEPARATE INSTANCE: this machine already runs an unrelated MySQL 9.7
 # system daemon (installed under /usr/local/mysql, LaunchDaemon
 # com.oracle.oss.mysql.mysqld) on the default port 3306, owning /tmp/mysql.sock,
-# with a root password we do not have. We must not touch it. PharmaIQ therefore
+# with a root password we do not have. We must not touch it. PharmaZs therefore
 # runs a Homebrew mysqld on port 3307 with its OWN socket, so the two never
 # collide and nothing we do can affect the pre-existing server.
 #
@@ -14,10 +14,10 @@ set -euo pipefail
 
 MYSQL_HOME=/opt/homebrew/opt/mysql
 DATADIR=/opt/homebrew/var/mysql
-SOCKET="$DATADIR/pharmaiq.sock"
+SOCKET="$DATADIR/pharmazs.sock"
 PORT=3307
-ERRLOG="$DATADIR/pharmaiq.err"
-PIDFILE="$DATADIR/pharmaiq.pid"
+ERRLOG="$DATADIR/pharmazs.err"
+PIDFILE="$DATADIR/pharmazs.pid"
 export PATH="$MYSQL_HOME/bin:$PATH"
 
 is_up() { mysqladmin --socket="$SOCKET" -u root ping >/dev/null 2>&1 && \
@@ -27,9 +27,9 @@ case "${1:-start}" in
   --status)
     if is_up; then
       mysql --socket="$SOCKET" -u root -e "SELECT VERSION() AS version, @@port AS port;"
-      echo "PharmaIQ MySQL is UP on port $PORT"
+      echo "PharmaZs MySQL is UP on port $PORT"
     else
-      echo "PharmaIQ MySQL is DOWN"; exit 1
+      echo "PharmaZs MySQL is DOWN"; exit 1
     fi
     ;;
   --stop)

@@ -1,5 +1,5 @@
 """
-PharmaIQ synthetic data configuration (SRS §21, §22).
+PharmaZs synthetic data configuration (SRS §21, §22).
 
 Everything tunable lives here so `generate.py` stays pure logic.
 
@@ -366,13 +366,13 @@ HERO_HCPS = [
 # DEMO LOGIN ACCOUNTS (SRS §3, §6). Password is intentionally weak and shared:
 # this is a portfolio demo, and the README says so.
 # ---------------------------------------------------------------------------
-DEMO_PASSWORD = "PharmaIQ@2026"
+DEMO_PASSWORD = "PharmaZs@2026"
 DEMO_USERS = [
-    ("Admin User",        "admin@pharmaiq.io",     "ADMIN"),
-    ("Priya Raghavan",    "exec@pharmaiq.io",      "EXECUTIVE"),
-    ("Sandeep Kulkarni",  "manager@pharmaiq.io",   "MANAGER"),
-    ("Rohan Verma",       "rep@pharmaiq.io",       "SALES_REP"),
-    ("Neha Bansal",       "analyst@pharmaiq.io",   "ANALYST"),
+    ("Admin User",        "admin@pharmazs.io",     "ADMIN"),
+    ("Priya Raghavan",    "exec@pharmazs.io",      "EXECUTIVE"),
+    ("Sandeep Kulkarni",  "manager@pharmazs.io",   "MANAGER"),
+    ("Rohan Verma",       "rep@pharmazs.io",       "SALES_REP"),
+    ("Neha Bansal",       "analyst@pharmazs.io",   "ANALYST"),
 ]
 
 # ---------------------------------------------------------------------------

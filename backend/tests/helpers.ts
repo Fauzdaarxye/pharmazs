@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { Application } from 'express';
 
-export const DEMO_PASSWORD = 'PharmaIQ@2026';
+export const DEMO_PASSWORD = 'PharmaZs@2026';
 
 export async function login(app: Application, email: string): Promise<{ accessToken: string; refreshToken: string }> {
   const res = await request(app)

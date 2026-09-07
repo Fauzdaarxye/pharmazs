@@ -1,4 +1,4 @@
-"""pytest suite for the PharmaIQ ML service.
+"""pytest suite for the PharmaZs ML service.
 
 Covers the modelling contract (weights, bands, anomaly thresholds,
 contributionPct sum, forecast horizon) AND the three ground-truth narratives

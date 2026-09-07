@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# run_all.sh — execute every query in the PharmaIQ SQL library and report
+# run_all.sh — execute every query in the PharmaZs SQL library and report
 #              pass/fail per query. A query PASSES only if it runs without
 #              error AND returns at least one row.
 #
@@ -14,10 +14,10 @@
 set -uo pipefail
 
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"
-SOCK="/opt/homebrew/var/mysql/pharmaiq.sock"
-DB="pharmaiq"
+SOCK="/opt/homebrew/var/mysql/pharmazs.sock"
+DB="pharmazs"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STMT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pharmaiq_stmts.XXXXXX")"
+STMT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pharmazs_stmts.XXXXXX")"
 trap 'rm -rf "$STMT_DIR"' EXIT
 
 total=0; passed=0; failed=0

@@ -1,4 +1,4 @@
-"""PharmaIQ ML / analytics FastAPI service (CONTRACT.md §6).
+"""PharmaZs ML / analytics FastAPI service (CONTRACT.md §6).
 
 Internal only — bound to 127.0.0.1:8000, reached solely by the Node API. Plain
 JSON in/out, no envelope, no auth.
@@ -17,7 +17,7 @@ from .models_schema import (
     RootCauseResponse,
 )
 
-app = FastAPI(title="PharmaIQ ML Service", version="1.0.0")
+app = FastAPI(title="PharmaZs ML Service", version="1.0.0")
 
 
 @app.get("/health")

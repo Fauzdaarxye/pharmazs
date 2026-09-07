@@ -1,5 +1,5 @@
 -- ============================================================================
--- PharmaIQ — Pharmaceutical Commercial Intelligence Platform
+-- PharmaZs — Pharmaceutical Commercial Intelligence Platform
 -- MySQL 8.0 schema (SRS §1, §39)
 --
 -- Design notes
@@ -14,11 +14,11 @@
 --     loses cents and KPI cards then disagree with each other.
 -- ============================================================================
 
-DROP DATABASE IF EXISTS pharmaiq;
-CREATE DATABASE pharmaiq
+DROP DATABASE IF EXISTS pharmazs;
+CREATE DATABASE pharmazs
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
-USE pharmaiq;
+USE pharmazs;
 
 -- ---------------------------------------------------------------------------
 -- AUTH & USERS (SRS §6)

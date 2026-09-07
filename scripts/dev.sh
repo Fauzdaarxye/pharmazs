@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PharmaIQ dev stack — start / stop / status every service in dependency order.
+# PharmaZs dev stack — start / stop / status every service in dependency order.
 #
 #   scripts/dev.sh up       start MySQL, ML service, API, frontend
 #   scripts/dev.sh down     stop everything
@@ -15,7 +15,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DAEMON="$ROOT/scripts/daemon.py"
 RUN="$ROOT/.run"
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"
-SOCKET=/opt/homebrew/var/mysql/pharmaiq.sock
+SOCKET=/opt/homebrew/var/mysql/pharmazs.sock
 
 mysql_up()  { mysql --socket="$SOCKET" -u root -e 'SELECT 1' >/dev/null 2>&1; }
 http_ok()   { curl -s -o /dev/null --max-time 3 "$1"; }
@@ -38,7 +38,7 @@ up)
       mysqld --user="$(id -un)" \
         --basedir=/opt/homebrew/opt/mysql --datadir=/opt/homebrew/var/mysql \
         --port=3307 --socket="$SOCKET" --mysqlx=OFF --local-infile=ON \
-        --log-error=/opt/homebrew/var/mysql/pharmaiq.err
+        --log-error=/opt/homebrew/var/mysql/pharmazs.err
     wait_for MySQL mysql_up 40
   fi
 
@@ -58,7 +58,7 @@ up)
 
   echo
   echo "Stack up:  http://127.0.0.1:3000/login"
-  echo "Demo login: exec@pharmaiq.io / PharmaIQ@2026"
+  echo "Demo login: exec@pharmazs.io / PharmaZs@2026"
   ;;
 
 down)

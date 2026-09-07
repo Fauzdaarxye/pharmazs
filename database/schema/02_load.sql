@@ -1,8 +1,8 @@
 -- ============================================================================
--- PharmaIQ — bulk load generated CSVs into MySQL
+-- PharmaZs — bulk load generated CSVs into MySQL
 --
 -- Run from the directory holding the CSVs:
---   mysql --local-infile=1 -u pharmaiq -p pharmaiq < 02_load.sql
+--   mysql --local-infile=1 -u pharmazs -p pharmazs < 02_load.sql
 -- or use database/seed.sh, which handles paths and the local_infile flag.
 --
 -- Two things here are deliberate and easy to get wrong:

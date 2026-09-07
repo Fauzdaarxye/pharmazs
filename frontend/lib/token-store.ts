@@ -3,9 +3,9 @@
 
 import type { AuthUser } from "./types";
 
-const ACCESS_KEY = "pharmaiq.accessToken";
-const REFRESH_KEY = "pharmaiq.refreshToken";
-const USER_KEY = "pharmaiq.user";
+const ACCESS_KEY = "pharmazs.accessToken";
+const REFRESH_KEY = "pharmazs.refreshToken";
+const USER_KEY = "pharmazs.user";
 
 const isBrowser = () => typeof window !== "undefined";
 

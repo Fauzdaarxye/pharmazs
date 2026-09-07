@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PharmaIQ synthetic data generator (SRS §21, §22).
+PharmaZs synthetic data generator (SRS §21, §22).
 
 Produces a CSV per table into ./out, ready for LOAD DATA INFILE.
 
@@ -131,7 +131,7 @@ class Writer:
 # ===========================================================================
 # generator
 # ===========================================================================
-class PharmaIQGenerator:
+class PharmaZsGenerator:
     def __init__(self, seed: int = C.RANDOM_SEED):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
@@ -298,7 +298,7 @@ class PharmaIQGenerator:
             hire = dt.date(2026, 9, 1) - dt.timedelta(days=int(rng.integers(1500, 4000)))
             zone = next(r[1] for r in self.regions if r[0] == rid)
             self.reps.append((next_id, f"MGR-{next_id:04d}", f"{first} {last}",
-                              f"{first.lower()}.{last.lower()}{next_id}@pharmaiq.io",
+                              f"{first.lower()}.{last.lower()}{next_id}@pharmazs.io",
                               rid, "", f"{zone} Zone", hire.isoformat(),
                               f"{float(rng.integers(90, 150)) * 1e6:.2f}", 1))
             self.manager_ids_by_region[rid].append(next_id)
@@ -316,7 +316,7 @@ class PharmaIQGenerator:
                 hire = dt.date(2026, 9, 1) - dt.timedelta(days=int(rng.integers(120, 3000)))
                 city = str(rng.choice(self.city_names_by_region[rid]))
                 self.reps.append((next_id, f"REP-{next_id:04d}", f"{first} {last}",
-                                  f"{first.lower()}.{last.lower()}{next_id}@pharmaiq.io",
+                                  f"{first.lower()}.{last.lower()}{next_id}@pharmazs.io",
                                   rid, int(rng.choice(self.manager_ids_by_region[rid])),
                                   f"{city} Territory", hire.isoformat(),
                                   f"{float(rng.integers(18, 42)) * 1e6:.2f}", 1))
@@ -829,7 +829,7 @@ class PharmaIQGenerator:
     # ORCHESTRATION
     # =======================================================================
     def run(self, outdir: Path) -> dict:
-        print("PharmaIQ synthetic data generator")
+        print("PharmaZs synthetic data generator")
         print(f"  seed={self.seed}  months={C.HISTORY_MONTHS} "
               f"({self.months[0]} .. {self.months[-1]})\n")
 
@@ -955,12 +955,12 @@ class PharmaIQGenerator:
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Generate PharmaIQ synthetic data")
+    ap = argparse.ArgumentParser(description="Generate PharmaZs synthetic data")
     ap.add_argument("--out", default=str(Path(__file__).parent / "out"))
     ap.add_argument("--seed", type=int, default=C.RANDOM_SEED)
     args = ap.parse_args()
 
-    summary = PharmaIQGenerator(seed=args.seed).run(Path(args.out))
+    summary = PharmaZsGenerator(seed=args.seed).run(Path(args.out))
 
     print(f"\nTotal revenue simulated: INR {summary['total_revenue_inr']:,.0f}")
     print("\nPlanted-narrative verification (target vs measured in the written rows):")

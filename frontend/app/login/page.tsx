@@ -8,17 +8,17 @@ import { tokenStore } from "@/lib/token-store";
 import { USE_MOCKS } from "@/lib/constants";
 
 const DEMO_ACCOUNTS = [
-  { email: "admin@pharmaiq.io", role: "Admin" },
-  { email: "exec@pharmaiq.io", role: "Executive" },
-  { email: "manager@pharmaiq.io", role: "Manager" },
-  { email: "rep@pharmaiq.io", role: "Sales Rep" },
-  { email: "analyst@pharmaiq.io", role: "Analyst" },
+  { email: "admin@pharmazs.io", role: "Admin" },
+  { email: "exec@pharmazs.io", role: "Executive" },
+  { email: "manager@pharmazs.io", role: "Manager" },
+  { email: "rep@pharmazs.io", role: "Sales Rep" },
+  { email: "analyst@pharmazs.io", role: "Analyst" },
 ];
-const DEMO_PASSWORD = "PharmaIQ@2026";
+const DEMO_PASSWORD = "PharmaZs@2026";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("exec@pharmaiq.io");
+  const [email, setEmail] = useState("exec@pharmazs.io");
   const [password, setPassword] = useState(DEMO_PASSWORD);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,7 @@ export default function LoginPage() {
             <Activity size={22} />
           </span>
           <div className="leading-tight">
-            <div className="text-[20px] font-bold">PharmaIQ</div>
+            <div className="text-[20px] font-bold">PharmaZs</div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-teal">
               Commercial Intelligence
             </div>
@@ -65,7 +65,7 @@ export default function LoginPage() {
           </p>
         </div>
         <div className="text-[12px] text-sidebar-muted">
-          © 2026 PharmaIQ. Internal analytics platform.
+          © 2026 PharmaZs. Internal analytics platform.
         </div>
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent-teal/10 blur-3xl"
@@ -81,7 +81,7 @@ export default function LoginPage() {
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar text-accent-teal">
                 <Activity size={22} />
               </span>
-              <div className="text-[20px] font-bold text-text">PharmaIQ</div>
+              <div className="text-[20px] font-bold text-text">PharmaZs</div>
             </div>
           </div>
 
