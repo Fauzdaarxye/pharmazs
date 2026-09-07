@@ -186,8 +186,23 @@ CREATE TABLE competitor_drugs (
   INDEX idx_cd_rival (rival_drug_id)
 ) ENGINE=InnoDB;
 
--- Monthly share-of-market per (our drug, region). our_share_pct + competitor
--- rows for the same key sum to ~100.
+-- Monthly share-of-market per (our drug, region).
+--
+-- ROW LAYOUT — read this before writing a query against this table. The layout is
+-- WIDE, not long/EAV: there is exactly ONE row per (drug_id, region_id,
+-- period_month), and that row carries BOTH sides of the comparison.
+--   * our_share_pct        is populated on EVERY row.
+--   * competitor_drug_id / competitor_share_pct are populated on rows where the
+--     drug has a tracked rival, and NULL for the 10 drugs that have none.
+--
+-- So `WHERE competitor_drug_id IS NULL` does NOT select "our share rows" — it
+-- selects only the handful of drugs with no competitor, and any market-share KPI
+-- built on that filter silently under-reports across the whole catalogue. To get
+-- our share, just read our_share_pct with no competitor filter; for a
+-- head-to-head, read both columns off the same row.
+--
+-- Only the single LARGEST rival is recorded per drug, so competitor_share_pct is
+-- that rival's share, not the whole competitive set.
 CREATE TABLE market_share (
   share_id            INT AUTO_INCREMENT PRIMARY KEY,
   drug_id             INT  NOT NULL,

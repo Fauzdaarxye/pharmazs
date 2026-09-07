@@ -1,0 +1,16 @@
+# PharmaIQ ML service — Python 3.14, verified cp314 wheels
+numpy==2.5.3
+pandas==3.0.5
+scikit-learn==1.9.0
+scipy==1.18.1
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+PyMySQL==1.2.0
+python-dotenv==1.2.3
+pydantic==2.13.5
+# statsmodels installed cp314 OK, but the forecaster does not depend on it
+# (Holt-Winters is implemented in numpy); kept for optional experimentation.
+statsmodels==0.15.0
+# dev / test
+pytest==9.1.1
+httpx==0.28.1
