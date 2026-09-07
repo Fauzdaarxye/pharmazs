@@ -19,6 +19,7 @@ import { competitorsRouter } from './routes/competitors.routes';
 import { inventoryRouter } from './routes/inventory.routes';
 import { metaRouter } from './routes/meta.routes';
 import { analyticsRouter } from './routes/analytics.routes';
+import { importsRouter } from './routes/imports.routes';
 
 export function createApp(): Application {
   const app = express();
@@ -65,6 +66,7 @@ export function createApp(): Application {
   app.use('/api/competitors', competitorsRouter);
   app.use('/api/inventory', inventoryRouter);
   app.use('/api/meta', metaRouter);
+  app.use('/api/imports', importsRouter);
   // Analytics/ML passthrough is mounted at /api (routes carry their own subpaths).
   app.use('/api', analyticsRouter);
 

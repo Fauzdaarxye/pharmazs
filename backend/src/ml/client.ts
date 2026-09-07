@@ -67,6 +67,11 @@ export interface AnomalyResult {
   direction: string;
 }
 
+export interface RefreshResult {
+  status: string;
+  tasksCompleted: string[];
+}
+
 export const mlClient = {
   health: () => call<MlHealth>('GET', '/health'),
   forecast: (entityType: string, entityId: number | null, horizon: number) =>
@@ -79,6 +84,7 @@ export const mlClient = {
     call<unknown>('POST', '/root-cause', payload),
   recommendations: (payload: { role: string; regionId?: number; repId?: number; limit: number }) =>
     call<unknown>('POST', '/recommendations', payload),
+  refreshAll: () => call<RefreshResult>('POST', '/jobs/refresh-all'),
 };
 
 /** Best-effort health check for /api/health — returns reachability, never throws. */
