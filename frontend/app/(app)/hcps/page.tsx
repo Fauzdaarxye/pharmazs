@@ -67,7 +67,7 @@ export default function HcpsPage() {
   const regionId = useMemo(() => {
     const name = filterValue(filters.region);
     if (!name) return undefined;
-    return metaFilters.data?.regions?.find((r) => r.name === name)?.id;
+    return metaFilters.data?.regions?.find((r) => r.regionName === name)?.regionId;
   }, [filters.region, metaFilters.data]);
 
   const minScore = useMemo(() => {

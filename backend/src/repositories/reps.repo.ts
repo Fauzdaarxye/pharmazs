@@ -45,7 +45,16 @@ export async function listReps(
   opts: { from?: string; to?: string; regionIds: number[]; sortColumn: string; sortDir: 'ASC' | 'DESC'; limit: number; offset: number },
 ): Promise<{ items: RepListItem[]; total: number }> {
   const { from, to } = await resolveWindow(opts.from, opts.to);
-  const filters: ScopeClause[] = [repScope(p), frag('sr.is_active = 1')];
+  const filters: ScopeClause[] = [
+    repScope(p),
+    frag('sr.is_active = 1'),
+    // Quota-carrying FIELD reps only. Managers (manager_id IS NULL) hold zone
+    // targets rather than monthly quotas, so they joined the leaderboard with
+    // target = 0 and achievement = 0 — ten phantom bottom-rankers that dragged
+    // team attainment from 100.9% down to 86.5% and made the whole column
+    // look broken. A manager belongs in a team roster, not a quota ranking.
+    frag('sr.manager_id IS NOT NULL'),
+  ];
   if (opts.regionIds.length) filters.push(frag(`sr.region_id IN (${opts.regionIds.map(() => '?').join(',')})`, ...opts.regionIds));
   const where = buildWhere(filters);
 
@@ -104,19 +113,48 @@ export async function getRepDetail(p: Principal, repId: number): Promise<RepList
   return items.find((r) => r.repId === repId) ?? null;
 }
 
+export interface RepPanelHcp {
+  hcpId: number;
+  hcpCode: string;
+  fullName: string;
+  specialty: string;
+  hospital: string;
+  regionName: string;
+  potentialScore: number | null;
+  priority: string | null;
+  lastVisitDate: string | null;
+}
+
+/**
+ * A rep's current HCP panel, PAGINATED. This previously ignored pageSize entirely
+ * and returned all 48 rows with no `meta`, so the caller had no total to page with.
+ * Panel size is unbounded in principle (a territory reshuffle can attach hundreds),
+ * so an unpaginated list is a latent payload problem, not just a cosmetic one.
+ */
 export async function getRepHcps(
   repId: number,
-): Promise<{ hcpId: number; hcpCode: string; fullName: string; specialty: string; regionName: string }[]> {
-  const rows = await query<RowDataPacket & { hcpId: number; hcpCode: string; fullName: string; specialty: string; regionName: string }>(
-    `SELECT h.hcp_id AS hcpId, h.hcp_code AS hcpCode, h.full_name AS fullName, h.specialty AS specialty, r.region_name AS regionName
-       FROM rep_hcp_assignments rha
-       JOIN hcps h ON h.hcp_id = rha.hcp_id
-       JOIN regions r ON r.region_id = h.region_id
-      WHERE rha.rep_id = ? AND rha.assigned_to IS NULL
-      ORDER BY h.full_name`,
+  opts: { limit: number; offset: number } = { limit: 25, offset: 0 },
+): Promise<{ items: RepPanelHcp[]; total: number }> {
+  const countRow = await queryOne<RowDataPacket & { n: number }>(
+    `SELECT COUNT(*) AS n FROM rep_hcp_assignments
+      WHERE rep_id = ? AND assigned_to IS NULL`,
     [repId],
   );
-  return rows;
+  const rows = await query<RowDataPacket & RepPanelHcp>(
+    `SELECT h.hcp_id AS hcpId, h.hcp_code AS hcpCode, h.full_name AS fullName,
+            h.specialty AS specialty, h.hospital AS hospital, r.region_name AS regionName,
+            s.total_score AS potentialScore, s.priority AS priority,
+            (SELECT MAX(v.visit_date) FROM visits v WHERE v.hcp_id = h.hcp_id) AS lastVisitDate
+       FROM rep_hcp_assignments rha
+       JOIN hcps h    ON h.hcp_id = rha.hcp_id
+       JOIN regions r ON r.region_id = h.region_id
+       LEFT JOIN hcp_scores s ON s.hcp_id = h.hcp_id
+      WHERE rha.rep_id = ? AND rha.assigned_to IS NULL
+      ORDER BY s.total_score DESC, h.full_name
+      LIMIT ? OFFSET ?`,
+    [repId, opts.limit, opts.offset],
+  );
+  return { items: rows, total: Number(countRow?.n ?? 0) };
 }
 
 export function repVisibleToPrincipal(p: Principal, rep: RepListItem | null): boolean {

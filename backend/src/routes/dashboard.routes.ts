@@ -4,7 +4,7 @@ import { ok } from '../http/envelope';
 import { asyncHandler } from '../http/middleware';
 import { authenticate, principal } from '../auth/middleware';
 import { commonFilters, limitParam } from '../http/filters';
-import { enumParam } from '../http/query';
+import { enumParam, parsePagination } from '../http/query';
 
 export const dashboardRouter = Router();
 dashboardRouter.use(authenticate);
@@ -63,8 +63,13 @@ dashboardRouter.get(
 dashboardRouter.get(
   '/alerts',
   asyncHandler(async (req: Request, res: Response) => {
-    const limit = limitParam(req, 10, 100);
-    const data = await service.getAlerts(principal(req), limit);
-    res.json(ok(data));
+    const severity = enumParam(req, 'severity', ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const);
+    const isReadRaw = req.query.isRead;
+    const isRead = isReadRaw === undefined ? undefined : isReadRaw === 'true' || isReadRaw === '1';
+    const { page, pageSize, offset } = parsePagination(req);
+    const { items, total } = await service.getAlerts(principal(req), {
+      severity, isRead, limit: pageSize, offset,
+    });
+    res.json(ok(items, { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }));
   }),
 );

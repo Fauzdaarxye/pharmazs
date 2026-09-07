@@ -72,7 +72,13 @@ export function DataTable<Row>({
           <thead className="sticky top-0 z-10 bg-bg">
             <tr className="border-b border-border">
               {columns.map((col) => {
-                const sorted = sort?.key === col.sortKey;
+                // Both `sort` and `col.sortKey` are optional, and `undefined ===
+                // undefined` is TRUE — so an unsortable column on a table with no
+                // sort state was reported as sorted, and the `sort!.dir`
+                // dereferences below then threw "Cannot read properties of
+                // undefined (reading 'dir')", blanking the whole page. Require
+                // both to be present before treating the column as sorted.
+                const sorted = Boolean(sort && col.sortKey && sort.key === col.sortKey);
                 return (
                   <th
                     key={col.key}

@@ -18,7 +18,22 @@ def _rupees(x: float) -> str:
 
 
 def build_recommendations(role: str = "ALL", region_id: int | None = None,
-                          rep_id: int | None = None, limit: int = 10) -> list[dict]:
+                          rep_id: int | None = None, limit: int = 10,
+                          ta_id: int | None = None) -> list[dict]:
+    """
+    Data-driven recommendations. Nothing here is a canned sentence (SRS §26).
+
+    `ta_id` narrows the HCP-priority recommendation to physicians who actually
+    prescribe in that therapeutic area. Without it, a root-cause call about a
+    CARDIOLOGY brand in North returned "Prioritise 18 high-potential oncologists in
+    North" — because oncologists happened to be the modal specialty among that
+    region's high scorers. Technically true, useless as advice, and a direct
+    contradiction of the SRS §26 worked example, which pairs a cardiology decline
+    with "prioritise high-potential cardiologists".
+
+    The filter is derived from prescribing behaviour rather than a hardcoded
+    specialty->area map, so it stays correct for physicians who treat across areas.
+    """
     recs: list[dict] = []
 
     # --- 1. HCP priority: cluster of high-potential HCPs per region ---
@@ -27,6 +42,37 @@ def build_recommendations(role: str = "ALL", region_id: int | None = None,
         high = scored[scored["priority"] == "HIGH"]
         if region_id is not None:
             high = high[high["region_id"] == region_id]
+        if ta_id is not None and not high.empty:
+            # Relevance is measured by VOLUME in the area, not by whether the
+            # physician ever touched it. A presence-only filter was useless here:
+            # 1,703 of 2,000 physicians prescribed something in cardiology in the
+            # last six months (general physicians prescribe cardio drugs too), so it
+            # kept all 18 North high scorers and oncologists still won the headcount
+            # vote. Ranking by area volume and keeping the upper half makes the
+            # modal specialty the one that actually drives the area.
+            ta_units = db.query_df(
+                """
+                SELECT p.hcp_id, SUM(p.units) AS ta_units
+                  FROM prescriptions p
+                  JOIN drugs d ON d.drug_id = p.drug_id
+                 WHERE d.ta_id = %s
+                   AND p.prescription_date >
+                       (SELECT MAX(prescription_date) - INTERVAL 6 MONTH FROM prescriptions)
+                 GROUP BY p.hcp_id
+                """,
+                (ta_id,),
+            )
+            if not ta_units.empty:
+                merged = high.merge(ta_units, on="hcp_id", how="left")
+                merged["ta_units"] = merged["ta_units"].fillna(0)
+                relevant = merged[merged["ta_units"] > 0]
+                if not relevant.empty:
+                    cutoff = relevant["ta_units"].median()
+                    narrowed = relevant[relevant["ta_units"] >= cutoff]
+                    # Only narrow if something survives — an empty recommendation
+                    # list is worse advice than a broader one.
+                    if not narrowed.empty:
+                        high = narrowed
         grp = high.groupby("region_id")
         region_names = {r["region_id"]: r["region_name"] for r in
                         db.query_df("SELECT region_id, region_name FROM regions").to_dict("records")}

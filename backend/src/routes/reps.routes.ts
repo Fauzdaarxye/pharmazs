@@ -47,8 +47,9 @@ repsRouter.get(
   '/:repId/hcps',
   asyncHandler(async (req: Request, res: Response) => {
     await service.ensureRepVisible(principal(req), repIdParam(req));
-    const data = await service.getRepHcps(repIdParam(req));
-    res.json(ok(data));
+    const { page, pageSize, offset } = parsePagination(req);
+    const { items, total } = await service.getRepHcps(repIdParam(req), { limit: pageSize, offset });
+    res.json(ok(items, { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }));
   }),
 );
 

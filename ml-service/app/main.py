@@ -9,7 +9,7 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 
 from . import anomalies as anom_mod
-from . import hcp_scoring, jobs, queries, recommendations, root_cause
+from . import db, hcp_scoring, jobs, queries, recommendations, root_cause
 from .forecasting import forecast_series
 from .models_schema import (
     Anomaly, AnomalyRequest, ForecastRequest, ForecastResponse, HcpScore,
@@ -78,9 +78,13 @@ def anomalies(req: AnomalyRequest):
 @app.post("/root-cause", response_model=RootCauseResponse)
 def root_cause_endpoint(req: RootCauseRequest):
     rc = root_cause.compute_root_cause(req.drugId, req.regionId, req.periodMonths)
-    # attach data-driven recommendations scoped to this region
+    # Attach recommendations scoped to this region AND to the drug's therapeutic
+    # area. Region alone produced advice about the wrong specialty entirely (a
+    # cardiology decline answered with "prioritise oncologists").
+    ta_row = db.query_one("SELECT ta_id FROM drugs WHERE drug_id = %s", (req.drugId,))
     recs = recommendations.build_recommendations(
-        role="ALL", region_id=req.regionId, limit=3)
+        role="ALL", region_id=req.regionId, limit=3,
+        ta_id=int(ta_row["ta_id"]) if ta_row else None)
     rc["recommendations"] = recs
     return rc
 

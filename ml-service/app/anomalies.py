@@ -59,6 +59,46 @@ def _drug_region_monthly(metric: str) -> pd.DataFrame:
     return df
 
 
+def _level_shift(vals: np.ndarray, periods: list, k: int) -> tuple[float, float, float, float] | None:
+    """
+    Detect a SUSTAINED level shift: the mean of the last `k` months against the mean
+    of the `k` months before it, scored against how volatile that comparison has
+    been historically for this series.
+
+    A point detector cannot see this shape, which is exactly the shape a business
+    cares about ("revenue is down 27% this quarter"). Worse, a same-calendar-month
+    baseline is *contaminated* by a sustained shift — the shifted months become part
+    of their own expectation — so a real quarter-long decline can score |z| < 1.
+    Measured on the seeded data, RespiCare/East fell 26.9% over two months while no
+    individual month exceeded |z| = 0.83, and the drop went unreported.
+
+    Returns (recent_mean, prior_mean, change_pct, z) or None when there is not
+    enough history to judge.
+    """
+    n = len(vals)
+    if n < 4 * k:
+        return None
+    # Distribution of every historical k-vs-k relative change, so the threshold is
+    # calibrated to this series' own volatility rather than a global constant.
+    changes: list[float] = []
+    for end in range(2 * k, n + 1):
+        prior = vals[end - 2 * k: end - k].mean()
+        recent = vals[end - k: end].mean()
+        if prior > 0:
+            changes.append((recent - prior) / prior)
+    if len(changes) < 4:
+        return None
+    arr = np.asarray(changes[:-1], dtype=float)      # exclude the window being tested
+    current = changes[-1]
+    med = float(np.median(arr))
+    mad = float(np.median(np.abs(arr - med)))
+    scale = mad * 1.4826 if mad > 0 else (float(arr.std()) or 1e-9)
+    z = (current - med) / scale
+    prior_mean = float(vals[n - 2 * k: n - k].mean())
+    recent_mean = float(vals[n - k: n].mean())
+    return recent_mean, prior_mean, current * 100.0, z
+
+
 def detect_anomalies(entity_type: str = "DRUG", metric: str = "revenue",
                      lookback_months: int = 24) -> list[dict]:
     monthly = _drug_region_monthly(metric)
@@ -108,6 +148,34 @@ def detect_anomalies(entity_type: str = "DRUG", metric: str = "revenue",
                 "zScore": round(float(z), 3),
                 "severity": sev,
                 "direction": "SPIKE" if z > 0 else "DROP",
+            })
+
+        # --- sustained level shifts over the most recent 2- and 3-month windows ---
+        # Reported alongside point anomalies because they are a different phenomenon:
+        # a point anomaly is "this month was odd", a level shift is "the run rate
+        # moved". Both belong on an anomalies page; only the second one catches a
+        # quarter-long slide.
+        label = f"{drug_names.get(drug_id, drug_id)} — {region_names.get(region_id, region_id)}"
+        for k in (2, 3):
+            shift = _level_shift(vals, g["period"].tolist(), k)
+            if shift is None:
+                continue
+            recent_mean, prior_mean, change_pct, zs = shift
+            sev = _severity(zs)
+            if sev is None or abs(change_pct) < 10.0:
+                continue          # ignore statistically odd but commercially trivial moves
+            results.append({
+                "entityType": "DRUG",
+                "entityId": int(drug_id),
+                "entityName": label,
+                "periodMonth": str(g.iloc[-1]["period"])[:10],
+                "metric": f"{metric}_{k}m_level",
+                "actual": round(recent_mean, 2),
+                "expected": round(prior_mean, 2),
+                "deviationPct": round(change_pct, 1),
+                "zScore": round(float(zs), 3),
+                "severity": sev,
+                "direction": "SPIKE" if change_pct > 0 else "DROP",
             })
 
     order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}

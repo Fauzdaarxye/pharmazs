@@ -202,16 +202,44 @@ export interface HcpSummary {
 
 // ---- Meta / filters (§5) ------------------------------------------------
 
-export interface FilterOption {
-  id: number;
-  name: string;
+/**
+ * Filter dropdown options from `GET /api/meta/filters`.
+ *
+ * Each list uses its OWN field names — the endpoint returns domain keys, not a
+ * generic `{id, name}`. These were previously all typed as `FilterOption
+ * {id, name}`, which typechecked fine and then failed silently at runtime:
+ * `region.name` is `undefined`, so a name->id lookup never matched and choosing a
+ * region simply did nothing. Two independent agents caught it by reading the live
+ * response. Same failure mode as `RegionalHighlights` — a plausible-looking type
+ * over an unverified shape is worse than no type, because it buys false confidence.
+ *
+ * Verified against `docs/API_SHAPES.md`.
+ */
+export interface RegionOption {
+  regionId: number;
+  regionName: string;
+}
+
+export interface TherapeuticAreaOption {
+  taId: number;
+  taName: string;
+}
+
+export interface ProductOption {
+  drugId: number;
+  drugName: string;
+}
+
+export interface RepOption {
+  repId: number;
+  fullName: string;
 }
 
 export interface MetaFilters {
-  regions: FilterOption[];
-  therapeuticAreas: FilterOption[];
-  products: FilterOption[];
-  reps: FilterOption[];
+  regions: RegionOption[];
+  therapeuticAreas: TherapeuticAreaOption[];
+  products: ProductOption[];
+  reps: RepOption[];
   specialties: string[];
   dateRange: { min: string; max: string };
 }

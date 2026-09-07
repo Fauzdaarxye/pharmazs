@@ -25,6 +25,19 @@ export async function ensureRepVisible(p: Principal, repId: number): Promise<voi
 /** Recommended HCPs for a rep — ML passthrough (SRS §27). */
 export async function getRecommendedHcps(p: Principal, repId: number, limit: number) {
   await ensureRepVisible(p, repId);
-  const region = await repo.repRegion(repId);
-  return mlClient.hcpScore({ regionId: region ?? undefined, limit });
+  // Rank the rep's OWN panel, not their whole region.
+  //
+  // This previously passed only `regionId`, so the ML service scored every
+  // physician in the region and returned the region's top scorers — none of whom
+  // were necessarily this rep's to call on. Measured against rep 11: zero of the
+  // ten "recommended" HCPs were in their 48-physician panel, and the list opened
+  // at a score of 89.6 while the panel's own best was 79.6.
+  //
+  // That inverts the point of SRS §27, which is "a rep has more doctors than time,
+  // so rank the ones they own". A recommendation for someone else's physician is
+  // not a prioritisation, it is a distraction.
+  const { items } = await repo.getRepHcps(repId, { limit: 1000, offset: 0 });
+  const hcpIds = items.map((h) => h.hcpId);
+  if (hcpIds.length === 0) return [];
+  return mlClient.hcpScore({ hcpIds, limit });
 }

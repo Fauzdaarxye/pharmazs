@@ -6,6 +6,12 @@
 // - when NEXT_PUBLIC_USE_MOCKS=1, serves contract-shaped fixtures instead
 
 import { API_BASE_URL, USE_MOCKS } from "./constants";
+import type {
+  Product, ProductDetail, ProductCompetitor, TrendPoint, ProductRegionalRow,
+  SalesRep, RepPanelHcp, RecommendedHcp, Region, DrilldownLevel, DrilldownRow,
+  Competitor, MarketSharePoint, InventoryRow, ForecastResult, ForecastEntityType,
+  AlertItem, AnomalyItem, Recommendation, RootCauseResult, Severity,
+} from "./types-pages";
 import { tokenStore } from "./token-store";
 import type {
   ApiEnvelope,
@@ -183,6 +189,31 @@ export const api = {
 
 const mockDelay = () => new Promise<void>((r) => setTimeout(r, 220));
 
+/** A page of rows plus the pager state the DataTable needs. */
+export interface Paged<T> {
+  data: T[];
+  meta: { page: number; pageSize: number; total: number; totalPages: number };
+}
+
+/**
+ * Normalise a list response into `Paged<T>`. `meta` is filled in from the request
+ * when the server omits it, so a caller never has to handle a missing pager — an
+ * endpoint that forgot to paginate previously surfaced as `meta: null` and a table
+ * stuck on page 1.
+ */
+function paged<T>(
+  res: { data: T[]; meta?: { page?: number; pageSize?: number; total?: number; totalPages?: number } },
+  q: { page?: number; pageSize?: number },
+): Paged<T> {
+  const page = res.meta?.page ?? q.page ?? 1;
+  const pageSize = res.meta?.pageSize ?? q.pageSize ?? 25;
+  const total = res.meta?.total ?? res.data.length;
+  return {
+    data: res.data,
+    meta: { page, pageSize, total, totalPages: res.meta?.totalPages ?? Math.max(1, Math.ceil(total / pageSize)) },
+  };
+}
+
 export const endpoints = {
   async login(email: string, password: string): Promise<LoginResponse> {
     if (USE_MOCKS) {
@@ -313,6 +344,108 @@ export const endpoints = {
     }
     return (await api.get<MetaFilters>("/meta/filters")).data;
   },
+
+  // ===== Pages added in the second build round ==============================
+  // Every helper below was written against docs/API_SHAPES.md (probed from the
+  // live API). Paginated helpers return { data, meta } so callers can drive the
+  // DataTable's pager; single-object helpers return the object directly.
+  //
+  // There is deliberately NO mock branch here: mock mode exists to review the two
+  // Figma-approved screens without a backend, and silently serving fixtures on the
+  // other pages is how the first round shipped a dashboard full of placeholder
+  // numbers that looked correct. These pages require the API to be up.
+
+  async products(q: {
+    page?: number; pageSize?: number; sort?: string; q?: string;
+    taId?: number; regionId?: number;
+  }): Promise<Paged<Product>> {
+    return paged(await api.get<Product[]>("/products", q as QueryParams), q);
+  },
+
+  async product(drugId: number): Promise<ProductDetail> {
+    return (await api.get<ProductDetail>(`/products/${drugId}`)).data;
+  },
+
+  async productTrend(drugId: number): Promise<TrendPoint[]> {
+    return (await api.get<TrendPoint[]>(`/products/${drugId}/trend`)).data;
+  },
+
+  async productRegional(drugId: number): Promise<ProductRegionalRow[]> {
+    return (await api.get<ProductRegionalRow[]>(`/products/${drugId}/regional`)).data;
+  },
+
+  async productForecast(drugId: number): Promise<ForecastResult> {
+    return (await api.get<ForecastResult>(`/products/${drugId}/forecast`)).data;
+  },
+
+  async productCompetitors(drugId: number): Promise<ProductCompetitor[]> {
+    return (await api.get<ProductCompetitor[]>(`/products/${drugId}/competitors`)).data;
+  },
+
+  async reps(q: { page?: number; pageSize?: number; sort?: string; regionId?: number }): Promise<Paged<SalesRep>> {
+    return paged(await api.get<SalesRep[]>("/reps", q as QueryParams), q);
+  },
+
+  async rep(repId: number): Promise<SalesRep> {
+    return (await api.get<SalesRep>(`/reps/${repId}`)).data;
+  },
+
+  async repHcps(repId: number, q: { page?: number; pageSize?: number } = {}): Promise<Paged<RepPanelHcp>> {
+    return paged(await api.get<RepPanelHcp[]>(`/reps/${repId}/hcps`, q as QueryParams), q);
+  },
+
+  async repRecommendedHcps(repId: number, limit = 10): Promise<RecommendedHcp[]> {
+    return (await api.get<RecommendedHcp[]>(`/reps/${repId}/recommended-hcps`, { limit })).data;
+  },
+
+  async regions(): Promise<Region[]> {
+    return (await api.get<Region[]>("/regions")).data;
+  },
+
+  async region(regionId: number): Promise<Region> {
+    return (await api.get<Region>(`/regions/${regionId}`)).data;
+  },
+
+  async regionDrilldown(regionId: number, level: DrilldownLevel): Promise<DrilldownRow[]> {
+    return (await api.get<DrilldownRow[]>(`/regions/${regionId}/drilldown`, { level })).data;
+  },
+
+  async competitors(): Promise<Competitor[]> {
+    return (await api.get<Competitor[]>("/competitors")).data;
+  },
+
+  async competitorMarketShare(q: { drugId?: number; regionId?: number }): Promise<MarketSharePoint[]> {
+    return (await api.get<MarketSharePoint[]>("/competitors/market-share", q as QueryParams)).data;
+  },
+
+  async inventory(q: { page?: number; pageSize?: number; sort?: string; regionId?: number; drugId?: number }): Promise<Paged<InventoryRow>> {
+    return paged(await api.get<InventoryRow[]>("/inventory", q as QueryParams), q);
+  },
+
+  async inventoryAtRisk(): Promise<InventoryRow[]> {
+    return (await api.get<InventoryRow[]>("/inventory/at-risk")).data;
+  },
+
+  async forecast(q: { entityType: ForecastEntityType; entityId?: number; horizon?: number }): Promise<ForecastResult> {
+    return (await api.get<ForecastResult>("/forecast", q as QueryParams)).data;
+  },
+
+  async alertList(q: { page?: number; pageSize?: number; severity?: Severity; isRead?: boolean } = {}): Promise<Paged<AlertItem>> {
+    return paged(await api.get<AlertItem[]>("/dashboard/alerts", q as QueryParams), q);
+  },
+
+  async anomalies(q: { page?: number; pageSize?: number; severity?: Severity; direction?: "DROP" | "SPIKE" } = {}): Promise<Paged<AnomalyItem>> {
+    return paged(await api.get<AnomalyItem[]>("/anomalies", q as QueryParams), q);
+  },
+
+  async recommendations(limit = 20): Promise<Recommendation[]> {
+    return (await api.get<Recommendation[]>("/recommendations", { limit })).data;
+  },
+
+  async whyDidSalesChange(body: { drugId: number; regionId: number; periodMonths?: number }): Promise<RootCauseResult> {
+    return (await api.post<RootCauseResult>("/analytics/why-did-sales-change", body)).data;
+  },
 };
+
 
 export type { Priority };

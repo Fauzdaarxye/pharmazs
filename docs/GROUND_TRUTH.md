@@ -106,3 +106,36 @@ revenue is ≈₹179 crore.
 Rep quotas are likewise derived FROM simulated revenue rather than drawn independently,
 so attainment spans 85–123% (mean ≈101%) instead of the ~700% the arbitrary targets
 produced.
+
+## Anomaly detection vs commercial significance
+
+Worth knowing before reading the Alerts page: **none of the three planted narratives
+is a statistical outlier for its own series**, and that is the correct result rather
+than a detector fault.
+
+| Narrative | Period change | That series' own historical range | robust z |
+|---|---|---|---|
+| RespiCare / East (2m) | −26.9% | −35% … +91% | −1.58 |
+| Dapaglyn / West (4m)  | +35.4% |  −3% … +37% | +1.99 |
+| CardioMax / North (3m)| −15.7% | −18% … +36% | −1.54 |
+
+A seasonal respiratory brand in the smallest region routinely swings further than the
+shock we planted. Tuning thresholds until these trip would report ordinary seasonality
+as an anomaly and make the page unusable.
+
+The narratives are instead found by **root-cause attribution** (SRS §25), which
+compares periods and apportions causes — and it recovers all three exactly. Anomaly
+detection (SRS §24) answers a different question: "is this month unusual for this
+series?"
+
+Detection covers two shapes deliberately:
+
+- **Point anomalies** — robust z on a seasonally-adjusted series; "this month was odd".
+- **Sustained level shifts** — the trailing 2- and 3-month mean against the preceding
+  window, scored against how volatile that comparison has historically been for that
+  series; "the run rate moved". A point detector structurally cannot see this, because
+  a sustained shift contaminates its own same-calendar-month baseline: RespiCare/East
+  fell 26.9% over two months while no single month exceeded |z| = 0.83.
+
+A useful future addition would be a plain "biggest commercial movers" view with no
+statistical gate at all, since that is what the planted narratives actually are.

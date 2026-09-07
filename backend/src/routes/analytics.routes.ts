@@ -4,7 +4,7 @@ import * as service from '../services/analytics.service';
 import { ok } from '../http/envelope';
 import { asyncHandler } from '../http/middleware';
 import { authenticate, principal } from '../auth/middleware';
-import { enumParam, intParam, optIntParam, dateParam, strParam, parseBody } from '../http/query';
+import { enumParam, intParam, optIntParam, dateParam, strParam, parseBody, parsePagination } from '../http/query';
 
 export const analyticsRouter = Router();
 analyticsRouter.use(authenticate);
@@ -25,9 +25,14 @@ analyticsRouter.get(
   '/anomalies',
   asyncHandler(async (req: Request, res: Response) => {
     const severity = enumParam(req, 'severity', ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const);
+    const direction = enumParam(req, 'direction', ['DROP', 'SPIKE'] as const);
     const from = dateParam(req, 'from');
     const to = dateParam(req, 'to');
-    res.json(ok(await service.anomalies(severity, from, to)));
+    const { page, pageSize, offset } = parsePagination(req);
+    const { items, total } = await service.anomalies(principal(req), {
+      severity, direction, from, to, limit: pageSize, offset,
+    });
+    res.json(ok(items, { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }));
   }),
 );
 

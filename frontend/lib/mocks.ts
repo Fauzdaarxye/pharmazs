@@ -394,10 +394,10 @@ export function mockHcpSummary(): HcpSummary {
 
 export function mockMetaFilters(): MetaFilters {
   return {
-    regions: REGIONS.map((name, i) => ({ id: i + 1, name })),
-    therapeuticAreas: mockTherapeuticAreas().map((t) => ({ id: t.taId, name: t.taName })),
-    products: mockTopProducts(6).map((p) => ({ id: p.drugId, name: p.drugName })),
-    reps: Array.from({ length: 10 }, (_, i) => ({ id: i + 1, name: `Rep ${i + 1}` })),
+    regions: REGIONS.map((name, i) => ({ regionId: i + 1, regionName: name })),
+    therapeuticAreas: mockTherapeuticAreas().map((t) => ({ taId: t.taId, taName: t.taName })),
+    products: mockTopProducts(6).map((p) => ({ drugId: p.drugId, drugName: p.drugName })),
+    reps: Array.from({ length: 10 }, (_, i) => ({ repId: i + 1, fullName: `Rep ${i + 1}` })),
     specialties: SPECIALTIES,
     dateRange: { min: "2024-09-01", max: "2026-08-31" },
   };
