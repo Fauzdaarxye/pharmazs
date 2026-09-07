@@ -1,0 +1,102 @@
+# PharmaZs — full stack for a single VM or local container run.
+#
+# Deliberate choices:
+#   * The ML service has NO published port. It is internal by contract and is
+#     reachable only over the compose network, by the API.
+#   * MySQL has no published port either. Uncomment it only if you need a local
+#     GUI client; exposing 3306 on a public VM is how these get compromised.
+#   * The frontend's API URL is a BUILD arg — NEXT_PUBLIC_* is inlined at build
+#     time. Change it and rebuild; setting it at runtime does nothing.
+#
+# Before first use: copy .env.docker.example to .env and set real secrets.
+
+name: pharmazs
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${DB_NAME:-pharmazs}
+      MYSQL_USER: ${DB_USER:-pharmazs}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    # 01_schema.sql creates the schema and all 22 tables. It runs ONCE, on an
+    # empty data directory only. Seed data is loaded separately — see
+    # docs/DEPLOYMENT.md, "Seeding the database".
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    # local_infile allows the CSV loader (database/schema/02_load.sql) to run
+    # against this instance; the mysqldump path does not need it.
+    command: --local-infile=1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    # ports:
+    #   - "127.0.0.1:3306:3306"
+
+  ml:
+    build:
+      context: ./ml-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-pharmazs}
+      DB_USER: ${DB_USER:-pharmazs}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      ML_HOST: 0.0.0.0
+      ML_PORT: "8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # No `ports:` — internal only, by design.
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-pharmazs}
+      DB_USER: ${DB_USER:-pharmazs}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      # DB_SOCKET must stay UNSET: a socket path makes mysql2 ignore DB_HOST.
+      ML_BASE_URL: http://ml:8000
+      ML_TIMEOUT_MS: "8000"
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?generate one, do not reuse the dev default}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      REFRESH_TTL_DAYS: ${REFRESH_TTL_DAYS:-7}
+      CORS_ORIGINS: ${CORS_ORIGINS:?set to the frontend origin, e.g. https://pharmazs.example.com}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ml:
+        condition: service_started
+    ports:
+      - "${API_BIND:-127.0.0.1}:4000:4000"
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Must be the URL the BROWSER uses, not an internal service name.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?e.g. https://pharmazs.example.com/api}
+        NEXT_PUBLIC_USE_MOCKS: "0"
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "${WEB_BIND:-127.0.0.1}:3000:3000"
+
+volumes:
+  mysql_data:
