@@ -9,6 +9,13 @@
 # collide and nothing we do can affect the pre-existing server.
 #
 # Usage:  database/mysql-start.sh [--status|--stop]
+#
+# ⚠️ THE `start` PATH DOES NOT WORK ON THIS HOST. It relies on `setsid`, which
+# macOS does not ship, so the launch fails silently and you get only
+# "FAILED to start". Use `scripts/dev.sh up`, which starts mysqld through
+# scripts/daemon.py — the project's working detach mechanism (see the note in
+# daemon.py about nohup not being sufficient either). --status and --stop here
+# are fine.
 
 set -euo pipefail
 
@@ -18,6 +25,10 @@ SOCKET="$DATADIR/pharmazs.sock"
 PORT=3307
 ERRLOG="$DATADIR/pharmazs.err"
 PIDFILE="$DATADIR/pharmazs.pid"
+# Stable temp dir for on-disk sorts/temp tables — see the note in `start`.
+# Never inherit TMPDIR here: an agent shell's TMPDIR is session-scoped and gets
+# reclaimed underneath the long-running server.
+TMPDIR_MYSQL="$DATADIR/tmp"
 export PATH="$MYSQL_HOME/bin:$PATH"
 
 is_up() { mysqladmin --socket="$SOCKET" -u root ping >/dev/null 2>&1 && \
@@ -50,6 +61,16 @@ case "${1:-start}" in
              --basedir="$MYSQL_HOME" --datadir="$DATADIR" 2>&1 | tail -3
     fi
 
+    # Pin tmpdir to a stable directory we own.
+    #
+    # WHY: without --tmpdir, mysqld inherits TMPDIR from whichever shell started
+    # it. Agent shells get a PER-SESSION scratch dir that is reclaimed when the
+    # session ends, so the long-lived server was left pointing at a path that no
+    # longer existed and every query needing an on-disk temp table died with
+    # "Can't create/write to file ... (OS errno 2)". Sorts and large GROUP BYs
+    # spill to disk, so this breaks real analytics queries, not just tests.
+    mkdir -p "$TMPDIR_MYSQL"
+
     # setsid detaches mysqld from this shell's process group, so it survives the
     # shell exiting. A plain `nohup ... &` was NOT enough here — the server died
     # whenever the launching agent shell was reclaimed.
@@ -58,6 +79,7 @@ case "${1:-start}" in
       --port="$PORT" --socket="$SOCKET" --mysqlx=OFF \
       --log-error="$ERRLOG" --pid-file="$PIDFILE" \
       --local-infile=ON \
+      --tmpdir="$TMPDIR_MYSQL" \
       > /dev/null 2>&1 < /dev/null &
     disown || true
 

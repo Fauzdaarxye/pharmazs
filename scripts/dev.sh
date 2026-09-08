@@ -16,6 +16,8 @@ DAEMON="$ROOT/scripts/daemon.py"
 RUN="$ROOT/.run"
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"
 SOCKET=/opt/homebrew/var/mysql/pharmazs.sock
+# Stable temp dir for mysqld's on-disk sorts — never inherit TMPDIR (see `up`).
+MYSQL_TMPDIR=/opt/homebrew/var/mysql/tmp
 
 mysql_up()  { mysql --socket="$SOCKET" -u root -e 'SELECT 1' >/dev/null 2>&1; }
 http_ok()   { curl -s -o /dev/null --max-time 3 "$1"; }
@@ -34,10 +36,19 @@ up)
   mkdir -p "$RUN"
   echo "1/4 MySQL (isolated instance, port 3307)"
   if mysql_up; then echo "  already up"; else
+    # --tmpdir is pinned deliberately. Without it mysqld inherits TMPDIR from the
+    # launching shell, and an agent shell's TMPDIR is a PER-SESSION scratch dir
+    # that gets reclaimed while this long-lived server keeps pointing at it. The
+    # result is delayed and confusing: the server stays up and simple queries
+    # work, but anything that spills to an on-disk temp table (large sorts,
+    # GROUP BYs — i.e. the analytics queries) fails with
+    # "Can't create/write to file ... (OS errno 2)".
+    mkdir -p "$MYSQL_TMPDIR"
     python3 "$DAEMON" start mysql --cwd "$ROOT" -- \
       mysqld --user="$(id -un)" \
         --basedir=/opt/homebrew/opt/mysql --datadir=/opt/homebrew/var/mysql \
         --port=3307 --socket="$SOCKET" --mysqlx=OFF --local-infile=ON \
+        --tmpdir="$MYSQL_TMPDIR" \
         --log-error=/opt/homebrew/var/mysql/pharmazs.err
     wait_for MySQL mysql_up 40
   fi

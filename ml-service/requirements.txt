@@ -8,6 +8,11 @@ uvicorn[standard]==0.52.4
 PyMySQL==1.2.0
 python-dotenv==1.2.3
 pydantic==2.13.5
+# RAG chat (Gemini + SSE streaming). google-genai pulls in google-auth and
+# cryptography; installing it downgrades websockets 17.1 -> 16.1.1, which
+# uvicorn[standard] still accepts (verified: uvicorn 0.52.4 imports and serves).
+google-genai==2.22.0
+sse-starlette==3.4.11
 # statsmodels installed cp314 OK, but the forecaster does not depend on it
 # (Holt-Winters is implemented in numpy); kept for optional experimentation.
 statsmodels==0.15.0

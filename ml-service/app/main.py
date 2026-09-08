@@ -7,15 +7,17 @@ from __future__ import annotations
 
 import numpy as np
 from fastapi import FastAPI, HTTPException
+from sse_starlette.sse import EventSourceResponse
 
 from . import anomalies as anom_mod
 from . import db, hcp_scoring, jobs, queries, recommendations, root_cause
 from .forecasting import forecast_series
 from .models_schema import (
-    Anomaly, AnomalyRequest, ForecastRequest, ForecastResponse, HcpScore,
+    Anomaly, AnomalyRequest, ChatRequest, ForecastRequest, ForecastResponse, HcpScore,
     HcpScoreRequest, RecommendationsRequest, RefreshResult, RootCauseRequest,
     RootCauseResponse,
 )
+from .rag import chat as chat_mod
 
 app = FastAPI(title="PharmaZs ML Service", version="1.0.0")
 
@@ -97,3 +99,27 @@ def recs(req: RecommendationsRequest):
 @app.post("/jobs/refresh-all", response_model=RefreshResult)
 def refresh_all():
     return jobs.refresh_all()
+
+
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    """RAG chat — retrieves live MySQL data, then streams a grounded answer.
+
+    Streams Server-Sent Events. Frame shapes:
+      {"meta": {...}}   once, before any token
+      {"chunk": "..."}  incremental answer text
+      {"error": "..."}  the turn failed; a done frame still follows
+      {"done": true}    terminal, always sent
+
+    roleScope comes from the Node API's verified JWT principal — never from the
+    browser — and is what constrains every query the retrieval layer runs.
+    """
+    history = [h.model_dump() for h in req.history] if req.history else []
+    scope = req.roleScope.model_dump() if req.roleScope else {}
+
+    return EventSourceResponse(
+        chat_mod.stream_chat(req.message, history, scope),
+        # Proxies that buffer will defeat streaming; this is the conventional
+        # opt-out and costs nothing when no proxy is present.
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+    )

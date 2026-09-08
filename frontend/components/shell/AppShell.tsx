@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 import { tokenStore } from "@/lib/token-store";
 import { CenteredSpinner } from "@/components/ui/States";
 import type { AuthUser } from "@/lib/types";
@@ -42,6 +43,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Topbar />
         <main className="mx-auto w-full max-w-[1440px] px-6 py-6">{children}</main>
       </div>
+      {/* Rendered inside the auth guard so it never appears on /login, and once
+          here rather than per page so the conversation survives navigation. */}
+      <ChatWidget />
     </div>
   );
 }

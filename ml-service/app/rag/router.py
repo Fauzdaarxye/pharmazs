@@ -7,7 +7,7 @@ so the context builder can scope its SQL without another model call.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
 Intent = Literal[
@@ -38,6 +38,12 @@ _TA_KEYWORDS = {
 
 # Intent pattern groups: tuples of (intent, list-of-regex-patterns).
 # First match wins.
+#
+# NOTE ON PLURALS: every noun here carries an explicit `s?`. A bare r"\bhcp\b"
+# does NOT match "hcps" — \b fails against the trailing "s" — and plural
+# phrasing is how users actually ask ("who are my top HCPs", "which products").
+# Without this, such messages fell through to GENERAL and reached the LLM with
+# no data context at all, which is exactly what the system prompt forbids.
 _INTENT_PATTERNS: list[tuple[Intent, list[str]]] = [
     ("ROOT_CAUSE_QUERY", [
         r"\bwhy\b.*(sale|revenue|drop|decline|fell|fall|decrease|down)",
@@ -46,68 +52,66 @@ _INTENT_PATTERNS: list[tuple[Intent, list[str]]] = [
         r"\bwhy.*performing\b",
     ]),
     ("FORECAST_QUERY", [
-        r"\bforecast\b",
-        r"\bpredict\b",
+        r"\bforecasts?\b",
+        r"\bpredicts?\b|\bpredicted\b|\bprediction\b",
         r"\bnext\s+(quarter|month|year)\b",
-        r"\bprojection\b",
+        r"\bprojections?\b",
         r"\bwhat.*will.*revenue\b",
         r"\bexpected.*revenue\b",
     ]),
     ("ANOMALY_QUERY", [
         r"\banomaly\b|\banomalies\b",
         r"\bunusual\b",
-        r"\boutlier\b",
-        r"\balert\b|\balerts\b",
+        r"\boutliers?\b",
+        r"\balerts?\b",
         r"\babnormal\b",
-        r"\bspike\b|\bdrop alert\b",
+        r"\bspikes?\b",
     ]),
     ("INVENTORY_QUERY", [
-        r"\binventory\b",
-        r"\bstock\b",
-        r"\bstockout\b",
-        r"\bsupply\b",
-        r"\bshortage\b",
-        r"\bat.?risk\b.*product",
+        r"\binventor(y|ies)\b",
+        r"\bstocks?\b",
+        r"\bstockouts?\b",
+        r"\bsupply\b|\bsupplies\b",
+        r"\bshortages?\b",
+        r"\bat.?risk\b",
     ]),
     ("HCP_QUERY", [
-        r"\bhcp\b",
-        r"\bdoctor\b|\bphysician\b",
-        r"\bcardiologist\b|\bdiabetologist\b|\boncologist\b",
-        r"\bspecialist\b",
+        r"\bhcps?\b",
+        r"\bdoctors?\b|\bphysicians?\b",
+        r"\bcardiologists?\b|\bdiabetologists?\b|\boncologists?\b",
+        r"\bspecialists?\b",
         r"\bprescri\w+",
-        r"\bpanel\b",
-        r"\bpotential score\b|\bscore\b.*hcp",
+        r"\bpanels?\b",
+        r"\bpotential scores?\b|\bscores?\b",
     ]),
     ("REP_QUERY", [
-        r"\brep\b|\bsales rep\b|\brepresentative\b",
-        r"\bfield\s+rep\b",
+        r"\breps?\b|\bsales reps?\b|\brepresentatives?\b",
+        r"\bfield\s+reps?\b",
         r"\battainment\b",
-        r"\btarget\b.*achieved",
-        r"\bquota\b",
+        r"\btargets?\b.*achieved",
+        r"\bquotas?\b",
     ]),
     ("FORECAST_QUERY", [
-        r"\bgrowth\s+trend\b",
-        r"\btrend\b",
+        r"\bgrowth\s+trends?\b",
+        r"\btrends?\b",
     ]),
     ("COMPARISON_QUERY", [
-        r"\bcompare\b",
+        r"\bcompare\b|\bcomparison\b",
         r"\bvs\b|\bversus\b",
         r"\bdifference\s+between\b",
         r"\bbetter.*than\b|\bworse.*than\b",
     ]),
     ("REGION_QUERY", [
-        r"\bregion\b|\bzone\b|\bterritory\b",
-        r"\bnorth\s+region\b|\bsouth\s+region\b|\beast\s+region\b|\bwest\s+region\b|\bcentral\s+region\b",
-        r"\bgeograph\b",
+        r"\bregions?\b|\bzones?\b|\bterritor(y|ies)\b",
+        r"\bgeograph\w*",
     ]),
     ("PRODUCT_QUERY", [
-        r"\bproduct\b|\bdrug\b|\bbrand\b",
-        r"\bmarket share\b",
-        r"\btop.*(product|drug|brand)\b",
-        r"\bcompetitor\b",
+        r"\bproducts?\b|\bdrugs?\b|\bbrands?\b",
+        r"\bmarket shares?\b",
+        r"\bcompetitors?\b",
     ]),
     ("SALES_QUERY", [
-        r"\bsale\b|\bsales\b|\brevenue\b",
+        r"\bsales?\b|\brevenues?\b",
         r"\bperformance\b",
         r"\bearned\b|\bgenerated\b",
         r"\bhow much\b",
@@ -118,9 +122,16 @@ _INTENT_PATTERNS: list[tuple[Intent, list[str]]] = [
 
 @dataclass
 class ParsedQuery:
+    """Result of intent classification.
+
+    Deliberately carries NO drug hint: resolving "CardioMax" to a drug_id needs
+    the database, and this module is kept DB-free so it stays fast and unit
+    testable. `context_builder` resolves drug names off `raw` against the drugs
+    table, which also means a renamed or newly added product needs no change
+    here.
+    """
     intent: Intent
     raw: str
-    drug_hint: str | None = None          # drug name fragment found in text
     region_hint: str | None = None        # region name found in text
     ta_hint: str | None = None            # therapeutic area keyword found
     period_months: int = 3                # default comparison window

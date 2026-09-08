@@ -143,3 +143,26 @@ class RefreshResult(BaseModel):
     ok: bool
     persisted: dict[str, int]
     tookMs: int
+
+
+# ---- /chat --------------------------------------------------------------
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class ChatRoleScope(BaseModel):
+    """Caller's data visibility, derived by the Node API from the verified JWT.
+
+    The browser never supplies this — if it could, a SALES_REP could widen their
+    own scope by editing a request body.
+    """
+    role: str = "EXECUTIVE"
+    regionId: Optional[int] = None
+    repId: Optional[int] = None
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+    history: Optional[list[ChatTurn]] = None
+    roleScope: Optional[ChatRoleScope] = None
